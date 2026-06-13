@@ -1,0 +1,366 @@
+/* === Reset & Base === */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
+  background: #f5f5f5;
+  color: #222;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+a { color: inherit; text-decoration: none; }
+button { cursor: pointer; font: inherit; }
+input, textarea, select { font: inherit; }
+
+/* === Layout === */
+.container { max-width: 960px; margin: 0 auto; padding: 16px; }
+.container--wide { max-width: 1200px; }
+
+/* === Header === */
+.app-header {
+  background: #1a1a2e;
+  color: #fff;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.app-header h1 { font-size: 1.25rem; }
+.app-header .session-info { font-size: 0.85rem; opacity: 0.85; }
+
+/* === Navigation === */
+.nav-tabs {
+  display: flex;
+  background: #16213e;
+  border-bottom: 2px solid #0f3460;
+  overflow-x: auto;
+}
+.nav-tab {
+  padding: 12px 20px;
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  transition: color 0.2s, border-bottom 0.2s;
+  border-bottom: 3px solid transparent;
+}
+.nav-tab:hover { color: #fff; }
+.nav-tab.active { color: #fff; border-bottom-color: #e94560; }
+
+/* === Cards === */
+.card {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.card--clickable { cursor: pointer; transition: box-shadow 0.2s; }
+.card--clickable:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+
+/* === Buttons === */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background 0.2s, border-color 0.2s;
+}
+.btn--primary { background: #e94560; color: #fff; }
+.btn--primary:hover { background: #d63550; }
+.btn--secondary { background: #0f3460; color: #fff; }
+.btn--secondary:hover { background: #16213e; }
+.btn--outline { background: #fff; border-color: #ccc; color: #333; }
+.btn--outline:hover { background: #f0f0f0; }
+.btn--success { background: #27ae60; color: #fff; }
+.btn--danger { background: #c0392b; color: #fff; }
+.btn--sm { padding: 4px 10px; font-size: 0.8rem; }
+.btn--lg { padding: 12px 24px; font-size: 1rem; }
+.btn--block { width: 100%; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* === Form === */
+.form-group { margin-bottom: 12px; }
+.form-label { display: block; margin-bottom: 4px; font-size: 0.85rem; font-weight: 500; color: #555; }
+.form-input, .form-textarea, .form-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+  transition: border-color 0.2s;
+}
+.form-input:focus, .form-textarea:focus, .form-select:focus {
+  outline: none;
+  border-color: #0f3460;
+  box-shadow: 0 0 0 2px rgba(15,52,96,0.15);
+}
+.form-textarea { resize: vertical; min-height: 80px; }
+
+/* === Grid === */
+.grid { display: grid; gap: 12px; }
+.grid--2 { grid-template-columns: repeat(2, 1fr); }
+.grid--3 { grid-template-columns: repeat(3, 1fr); }
+.grid--4 { grid-template-columns: repeat(4, 1fr); }
+
+/* === Scoreboard === */
+.scoreboard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  padding: 24px 16px;
+  background: #1a1a2e;
+  color: #fff;
+}
+.team-score {
+  text-align: center;
+  flex: 1;
+}
+.team-score .team-name {
+  font-size: 1.2rem;
+  opacity: 0.8;
+  margin-bottom: 4px;
+}
+.team-score .score {
+  font-size: 4rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.team-score.left .score { color: #3498db; }
+.team-score.right .score { color: #e74c3c; }
+.score-divider { font-size: 2rem; opacity: 0.3; }
+
+/* === Display (fullscreen) === */
+.display-fullscreen {
+  min-height: 100vh;
+  background: #0d0d1a;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+}
+.display-header {
+  text-align: center;
+  padding: 24px 16px 16px;
+}
+.display-header .session-title {
+  font-size: 1.5rem;
+  opacity: 0.7;
+}
+.display-scoreboard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 48px;
+  padding: 32px 16px;
+}
+.display-scoreboard .team-name {
+  font-size: 2rem;
+  opacity: 0.8;
+  margin-bottom: 8px;
+  text-align: center;
+}
+.display-scoreboard .score {
+  font-size: 8rem;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+}
+.display-scoreboard .team.left .score { color: #3498db; }
+.display-scoreboard .team.right .score { color: #e74c3c; }
+.display-scoreboard .vs {
+  font-size: 3rem;
+  opacity: 0.2;
+  font-weight: 300;
+}
+.display-current-game {
+  text-align: center;
+  padding: 16px;
+  font-size: 1.5rem;
+  opacity: 0.9;
+}
+.display-recent-record {
+  text-align: center;
+  padding: 12px 16px;
+  font-size: 1rem;
+  opacity: 0.7;
+  background: rgba(255,255,255,0.05);
+}
+.display-progress {
+  padding: 0 24px 24px;
+}
+.display-progress-bar {
+  height: 8px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.display-progress-bar .fill {
+  height: 100%;
+  background: #e94560;
+  transition: width 0.3s;
+}
+.display-progress-text {
+  text-align: center;
+  margin-top: 8px;
+  font-size: 0.9rem;
+  opacity: 0.6;
+}
+
+/* === Tab Content === */
+.tab-content { display: none; padding: 16px; }
+.tab-content.active { display: block; }
+
+/* === Game List === */
+.game-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+}
+.game-item:last-child { border-bottom: none; }
+.game-info { flex: 1; }
+.game-name { font-weight: 600; }
+.game-meta { font-size: 0.8rem; color: #777; }
+.game-actions { display: flex; gap: 6px; }
+.session-list-item { align-items: flex-start; }
+
+/* === Repertoire === */
+.repertoire-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+}
+.repertoire-item .drag-handle { cursor: grab; color: #999; font-size: 1.2rem; }
+.repertoire-item .order-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #0f3460;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.repertoire-item .item-info { flex: 1; }
+.repertoire-item .item-actions { display: flex; gap: 4px; }
+
+/* === Session Progress === */
+.progress-game-card {
+  background: #fff;
+  border-radius: 8px;
+  border-left: 4px solid #0f3460;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.progress-game-card.completed { border-left-color: #27ae60; opacity: 0.7; }
+.progress-game-card.current { border-left-color: #e94560; box-shadow: 0 0 0 2px rgba(233,69,96,0.2); }
+.progress-game-card.upcoming { border-left-color: #ddd; }
+.result-buttons { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.bonus-buttons { display: flex; gap: 6px; margin-top: 8px; }
+
+/* === Record List === */
+.record-item {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+  font-size: 0.9rem;
+}
+.record-item .record-game { font-weight: 600; }
+.record-item .record-score { color: #555; }
+.record-item .record-actions { margin-top: 6px; }
+
+/* === Utility === */
+.text-center { text-align: center; }
+.text-sm { font-size: 0.8rem; }
+.text-muted { color: #777; }
+.mt-1 { margin-top: 8px; }
+.mt-2 { margin-top: 16px; }
+.mb-2 { margin-bottom: 16px; }
+.flex-between { display: flex; align-items: center; justify-content: space-between; }
+.flex-wrap { flex-wrap: wrap; }
+.gap-1 { gap: 8px; }
+.empty-state { text-align: center; padding: 40px 16px; color: #999; }
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+.badge--blue { background: #3498db; color: #fff; }
+.badge--green { background: #27ae60; color: #fff; }
+.badge--red { background: #e74c3c; color: #fff; }
+.badge--gray { background: #999; color: #fff; }
+
+/* === Modal === */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+.modal-overlay.hidden { display: none; }
+.modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 480px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.modal-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+/* === Responsive === */
+@media (max-width: 600px) {
+  .grid--2, .grid--3, .grid--4 { grid-template-columns: 1fr; }
+  .container { padding: 12px; }
+  .app-header { padding: 14px 12px; position: sticky; top: 0; z-index: 20; }
+  .app-header h1 { font-size: 1.05rem; }
+  .app-header .session-info { font-size: 0.8rem; }
+  .nav-tabs { position: sticky; top: 61px; z-index: 15; }
+  .nav-tab { flex: 1; min-width: 88px; padding: 14px 12px; font-size: 0.95rem; }
+  .card { padding: 14px; border-radius: 10px; }
+  .btn { min-height: 44px; padding: 10px 14px; font-size: 0.95rem; }
+  .btn--sm { min-height: 40px; padding: 8px 12px; font-size: 0.9rem; }
+  .form-label { font-size: 0.9rem; margin-bottom: 6px; }
+  .form-input, .form-textarea, .form-select { min-height: 44px; padding: 10px 12px; font-size: 16px; }
+  .form-textarea { min-height: 96px; }
+  .tab-content { padding: 12px 0 20px; }
+  .flex-between { gap: 10px; flex-wrap: wrap; }
+  .game-item, .repertoire-item { align-items: flex-start; padding: 14px 8px; }
+  .game-name { font-size: 1rem; }
+  .game-meta, .text-sm { font-size: 0.88rem; }
+  .game-actions, .repertoire-item .item-actions, .result-buttons, .bonus-buttons, .modal-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .game-actions > *, .repertoire-item .item-actions > *, .result-buttons > *, .bonus-buttons > *, .modal-actions > * {
+    flex: 1 1 calc(50% - 6px);
+  }
+  .progress-game-card { padding: 14px; }
+  .progress-game-card .form-group { margin-bottom: 10px; }
+  .scoreboard { gap: 16px; padding: 16px 8px; }
+  .team-score .score { font-size: 2.5rem; }
+  .display-scoreboard .score { font-size: 5rem; }
+  .display-scoreboard .team-name { font-size: 1.3rem; }
+  .display-scoreboard { gap: 24px; padding: 24px 8px; }
+}

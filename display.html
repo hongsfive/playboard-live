@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>점수판 — 레크레이션</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div class="display-fullscreen" id="display">
+    <!-- No session state -->
+    <div id="noSession" class="text-center" style="padding:40vh 16px; display:none;">
+      <div style="font-size:3rem; margin-bottom:16px;">📺</div>
+      <div style="font-size:1.5rem; opacity:0.5;">활성 세션이 없습니다</div>
+      <div class="text-sm text-muted mt-2">운영 화면에서 세션을 선택해 주세요</div>
+    </div>
+
+    <!-- Display content -->
+    <div id="displayContent" style="display:none; flex:1; display:flex; flex-direction:column;">
+      <!-- Session Header -->
+      <div class="display-header">
+        <div class="session-title" id="displaySessionTitle"></div>
+      </div>
+
+      <!-- Scoreboard -->
+      <div class="display-scoreboard">
+        <div class="team left">
+          <div class="team-name" id="leftTeamName"></div>
+          <div class="score" id="leftScore">0</div>
+        </div>
+        <div class="vs">VS</div>
+        <div class="team right">
+          <div class="team-name" id="rightTeamName"></div>
+          <div class="score" id="rightScore">0</div>
+        </div>
+      </div>
+
+      <!-- Current Game -->
+      <div class="display-current-game" id="currentGame"></div>
+
+      <!-- Recent Record -->
+      <div class="display-recent-record" id="recentRecord"></div>
+
+      <!-- Progress -->
+      <div class="display-progress">
+        <div class="display-progress-bar">
+          <div class="fill" id="progressFill" style="width:0%"></div>
+        </div>
+        <div class="display-progress-text" id="progressText"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/app.js"></script>
+  <script>
+    // === Display Page Logic (Read-Only) ===
+    function render() {
+      const s = App.Session.getActive();
+      const noSession = document.getElementById('noSession');
+      const content = document.getElementById('displayContent');
+
+      if (!s) {
+        noSession.style.display = 'block';
+        content.style.display = 'none';
+        return;
+      }
+
+      noSession.style.display = 'none';
+      content.style.display = 'flex';
+
+      // Session title
+      document.getElementById('displaySessionTitle').textContent = s.title;
+
+      // Team names
+      document.getElementById('leftTeamName').textContent = s.leftTeamName;
+      document.getElementById('rightTeamName').textContent = s.rightTeamName;
+
+      // Scores
+      const scores = App.Session.getScores(s.id);
+      document.getElementById('leftScore').textContent = scores.leftTotal;
+      document.getElementById('rightScore').textContent = scores.rightTotal;
+
+      // Current game & progress
+      if (s.repertoireId) {
+        const items = App.Repertoire.items(s.repertoireId).filter(i => i.active);
+        const records = App.Record.bySession(s.id);
+        const completedItems = new Set();
+        records.forEach(r => {
+          if (r.repertoireItemId) completedItems.add(r.repertoireItemId);
+        });
+
+        // Find current game
+        let currentGameName = '';
+        for (const item of items) {
+          if (!completedItems.has(item.id)) {
+            const game = App.Game.byId(item.gameId);
+            currentGameName = game ? game.name : '';
+            break;
+          }
+        }
+
+        // Progress
+        const completedCount = items.filter(item => completedItems.has(item.id)).length;
+        const total = items.length;
+        const pct = total > 0 ? Math.round((completedCount / total) * 100) : 0;
+
+        document.getElementById('currentGame').textContent = currentGameName ? `현재: ${currentGameName}` : '모든 게임 완료!';
+        document.getElementById('progressFill').style.width = pct + '%';
+        document.getElementById('progressText').textContent = `${completedCount} / ${total} (${pct}%)`;
+
+        // Recent record
+        if (records.length > 0) {
+          const latest = records[records.length - 1];
+          const item = latest.repertoireItemId ? App.RepertoireItem.byId(latest.repertoireItemId) : null;
+          const game = item ? App.Game.byId(item.gameId) : null;
+          const label = latest.resultType === 'quiz_round'
+                        ? `퀴즈 ${latest.questionCount || 0}문제 · ${s.leftTeamName} ${latest.correctCountLeft || 0} / ${s.rightTeamName} ${latest.correctCountRight || 0}`
+                        : latest.resultType === 'left_win' ? `${s.leftTeamName} 승` :
+                        latest.resultType === 'right_win' ? `${s.rightTeamName} 승` :
+                        latest.resultType === 'draw_zero' ? '동점 (0점)' :
+                        latest.resultType === 'draw_half' ? '동점 (절반)' :
+                        latest.resultType === 'bonus_left' ? `${s.leftTeamName} +${latest.leftPoints}` :
+                        `${s.rightTeamName} +${latest.rightPoints}`;
+          document.getElementById('recentRecord').textContent =
+            `최근: ${game ? game.name : ''} — ${label} (${latest.leftPoints}:${latest.rightPoints})`;
+        } else {
+          document.getElementById('recentRecord').textContent = '아직 기록이 없습니다.';
+        }
+      } else {
+        document.getElementById('currentGame').textContent = '';
+        document.getElementById('progressFill').style.width = '0%';
+        document.getElementById('progressText').textContent = '';
+        document.getElementById('recentRecord').textContent = '';
+      }
+    }
+
+    // Auto-refresh every 2 seconds
+    render();
+    setInterval(render, 2000);
+  </script>
+</body>
+</html>
