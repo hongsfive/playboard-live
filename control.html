@@ -8,40 +8,35 @@
 </head>
 <body>
   <div id="app">
-    <!-- Header -->
     <div class="app-header">
       <div>
         <a href="index.html" style="font-size:0.85rem; opacity:0.7;">← 홈</a>
         <h1 id="headerTitle">운영 화면</h1>
       </div>
       <div style="text-align:right;">
-        <div class="session-info" id="headerSession">세션 선택 필요</div>
-        <div class="session-info" id="headerScore"></div>
+        <div class="session-info" id="headerSession">세션 미선택</div>
+        <div class="session-info" id="headerScore">세션 관리 탭에서 세션을 준비해 주세요</div>
       </div>
     </div>
 
-    <!-- No Session Warning -->
     <div id="noSessionWarning" class="container" style="display:none;">
       <div class="card" style="border:2px solid #ffd166; background:#fff9e8;">
-        <div style="font-weight:700; margin-bottom:8px;">세션 없이도 준비 작업은 가능합니다.</div>
+        <div style="font-weight:700; margin-bottom:8px;">세션이 없어도 준비 작업은 가능합니다.</div>
         <p class="text-sm" style="margin-bottom:12px; color:#5c4b00;">
-          게임리스트와 레퍼토리는 지금 바로 정리할 수 있습니다. 세션은 실제 행사 진행을 시작할 때만 선택하면 됩니다.
+          게임리스트와 레퍼토리를 먼저 정리하고, 세션 관리 탭에서 실제 행사 세션을 만들거나 수정해 주세요.
         </p>
-        <a href="index.html" class="btn btn--outline">세션 선택/생성은 홈에서 →</a>
       </div>
     </div>
 
-    <!-- Main Content -->
-    <div id="mainContent" style="display:none;">
-      <!-- Tabs -->
+    <div id="mainContent">
       <div class="nav-tabs">
         <button class="nav-tab active" data-tab="games">게임리스트</button>
         <button class="nav-tab" data-tab="repertoire">레퍼토리</button>
+        <button class="nav-tab" data-tab="sessions">세션 관리</button>
         <button class="nav-tab" data-tab="progress">진행</button>
         <button class="nav-tab" data-tab="records">기록</button>
       </div>
 
-      <!-- Tab: Games -->
       <div class="tab-content active" id="tab-games">
         <div class="container">
           <div class="flex-between mb-2">
@@ -52,7 +47,6 @@
         </div>
       </div>
 
-      <!-- Tab: Repertoire -->
       <div class="tab-content" id="tab-repertoire">
         <div class="container">
           <div class="flex-between mb-2" style="gap:12px; align-items:flex-end; flex-wrap:wrap;">
@@ -64,7 +58,9 @@
               </div>
             </div>
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
-              <a href="index.html" class="btn btn--outline btn--sm">홈에서 새 레퍼토리</a>
+              <button class="btn btn--outline btn--sm" onclick="showRepertoireForm()">+ 새 레퍼토리</button>
+              <button class="btn btn--outline btn--sm" onclick="editSelectedRepertoire()">레퍼토리 수정</button>
+              <button class="btn btn--danger btn--sm" onclick="deleteSelectedRepertoire()">레퍼토리 삭제</button>
               <button class="btn btn--primary btn--sm" onclick="showAddGameToRepertoire()">+ 게임 추가</button>
             </div>
           </div>
@@ -73,7 +69,20 @@
         </div>
       </div>
 
-      <!-- Tab: Progress -->
+      <div class="tab-content" id="tab-sessions">
+        <div class="container">
+          <div class="flex-between mb-2">
+            <h3>세션 관리</h3>
+            <button class="btn btn--primary btn--sm" onclick="showSessionForm()">+ 새 세션</button>
+          </div>
+          <div class="card" style="background:#f8fbff; border:1px solid #d6e6ff; box-shadow:none; margin-bottom:12px;">
+            <div style="font-weight:700; margin-bottom:6px;">여기서 할 수 있는 일</div>
+            <div class="text-sm text-muted">팀 이름 변경, 연결 레퍼토리 교체, 날짜/제목 수정, 활성 세션 전환을 모두 이 탭에서 관리합니다.</div>
+          </div>
+          <div id="sessionList"></div>
+        </div>
+      </div>
+
       <div class="tab-content" id="tab-progress">
         <div class="container">
           <div class="flex-between mb-2">
@@ -83,13 +92,12 @@
           <div id="progressGuide" class="card" style="background:#f8fbff; border:1px solid #d6e6ff; box-shadow:none; margin-bottom:12px;"></div>
           <div id="progressGames"></div>
           <div class="card text-center" style="margin-top:12px;">
-            <button class="btn btn--secondary btn--block" onclick="showAddGameToRepertoire()">+ 진행 중 게임 추가</button>
-            <div class="text-sm text-muted mt-1">여기서 추가하면 현재 세션 레퍼토리 맨 아래에도 함께 추가됩니다.</div>
+            <button class="btn btn--secondary btn--block" onclick="showAddGameToActiveSessionRepertoire()">+ 진행 중 게임 추가</button>
+            <div class="text-sm text-muted mt-1">현재 활성 세션의 레퍼토리 맨 아래에 추가되고, 다음 세션에도 그대로 남습니다.</div>
           </div>
         </div>
       </div>
 
-      <!-- Tab: Records -->
       <div class="tab-content" id="tab-records">
         <div class="container">
           <div class="flex-between mb-2">
@@ -109,7 +117,6 @@
     </div>
   </div>
 
-  <!-- Game Form Modal -->
   <div class="modal-overlay hidden" id="gameModal">
     <div class="modal">
       <div class="modal-title" id="gameModalTitle">새 게임</div>
@@ -133,7 +140,7 @@
           <label class="form-label">배점 방식</label>
           <select class="form-select" id="gameScoringMode">
             <option value="fixed_per_game">게임 1회당 고정 배점</option>
-            <option value="per_question">문제당 배점</option>
+            <option value="per_question">정답 수 직접 기록</option>
           </select>
         </div>
         <div class="form-group">
@@ -170,10 +177,88 @@
     </div>
   </div>
 
-  <!-- Add Game to Repertoire Modal -->
+  <div class="modal-overlay hidden" id="repertoireModal">
+    <div class="modal">
+      <div class="modal-title" id="repertoireModalTitle">새 레퍼토리</div>
+      <input type="hidden" id="repertoireEditId">
+      <div class="form-group">
+        <label class="form-label">레퍼토리 제목</label>
+        <input class="form-input" id="repertoireFormTitle" placeholder="예: 교회 여름 수련회">
+      </div>
+      <div class="form-group">
+        <label class="form-label">대상</label>
+        <select class="form-select" id="repertoireFormAudience">
+          <option value="general">일반</option>
+          <option value="church">교회</option>
+          <option value="school">학교</option>
+          <option value="company">기업</option>
+          <option value="family">가족</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">설명</label>
+        <textarea class="form-textarea" id="repertoireFormDescription" rows="2"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn--outline" onclick="closeModal('repertoireModal')">취소</button>
+        <button class="btn btn--primary" onclick="saveRepertoire()">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="sessionModal">
+    <div class="modal">
+      <div class="modal-title" id="sessionModalTitle">새 세션</div>
+      <input type="hidden" id="sessionEditId">
+      <div class="form-group">
+        <label class="form-label">세션 제목</label>
+        <input class="form-input" id="sessionTitle" placeholder="예: 2026 여름 수련회">
+      </div>
+      <div class="form-group">
+        <label class="form-label">연결 레퍼토리</label>
+        <select class="form-select" id="sessionRepertoire"></select>
+      </div>
+      <div class="grid grid--2">
+        <div class="form-group">
+          <label class="form-label">좌측 팀 이름</label>
+          <input class="form-input" id="sessionLeftTeam" value="파란 팀">
+        </div>
+        <div class="form-group">
+          <label class="form-label">우측 팀 이름</label>
+          <input class="form-input" id="sessionRightTeam" value="빨간 팀">
+        </div>
+      </div>
+      <div class="grid grid--2">
+        <div class="form-group">
+          <label class="form-label">날짜</label>
+          <input class="form-input" type="date" id="sessionDate">
+        </div>
+        <div class="form-group">
+          <label class="form-label">상태</label>
+          <select class="form-select" id="sessionStatus">
+            <option value="planning">준비중</option>
+            <option value="active">진행중</option>
+            <option value="completed">완료</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label style="display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" id="sessionSetActive" checked>
+          <span class="text-sm">저장 후 이 세션을 활성 세션으로 사용</span>
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn--outline" onclick="closeModal('sessionModal')">취소</button>
+        <button class="btn btn--primary" onclick="saveSession()">저장</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay hidden" id="addRepItemModal">
     <div class="modal">
       <div class="modal-title">레퍼토리에 게임 추가</div>
+      <input type="hidden" id="repItemTargetRepertoireId">
       <div class="form-group">
         <label class="form-label">게임 선택</label>
         <select class="form-select" id="repItemGameSelect"></select>
@@ -195,7 +280,6 @@
     </div>
   </div>
 
-  <!-- Edit Record Modal -->
   <div class="modal-overlay hidden" id="editRecordModal">
     <div class="modal">
       <div class="modal-title">기록 수정</div>
@@ -207,30 +291,26 @@
           <option value="right_win">우팀 승</option>
           <option value="draw_zero">동점 (0점)</option>
           <option value="draw_half">동점 (절반)</option>
-          <option value="bonus_left">응원점수 (좌)</option>
-          <option value="bonus_right">응원점수 (우)</option>
-          <option value="quiz_round">퀴즈형 문제별 점수</option>
+          <option value="bonus_left">보너스 (좌)</option>
+          <option value="bonus_right">보너스 (우)</option>
+          <option value="quiz_round">퀴즈 정답 수 기록</option>
         </select>
       </div>
       <div class="form-group">
         <label class="form-label">배점</label>
         <input class="form-input" type="number" id="editRecordPoints" value="10">
       </div>
-      <div id="editQuizFields" style="display:none; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px;">
-        <div class="form-group">
-          <label class="form-label">총 문제 수</label>
-          <input class="form-input" type="number" id="editRecordQuestionCount" value="0" min="0">
-        </div>
-        <div class="form-group">
-          <label class="form-label">좌 정답 수</label>
+      <div id="editQuizFields" class="score-entry-layout hidden" style="margin-top:12px;">
+        <div class="team-score-panel left">
+          <div class="team-score-panel__header">좌측 팀 정답 수</div>
           <input class="form-input" type="number" id="editRecordCorrectLeft" value="0" min="0">
         </div>
-        <div class="form-group">
-          <label class="form-label">우 정답 수</label>
+        <div class="team-score-panel right">
+          <div class="team-score-panel__header">우측 팀 정답 수</div>
           <input class="form-input" type="number" id="editRecordCorrectRight" value="0" min="0">
         </div>
       </div>
-      <div class="form-group">
+      <div class="form-group" style="margin-top:12px;">
         <label class="form-label">메모</label>
         <input class="form-input" id="editRecordNote">
       </div>
@@ -243,7 +323,6 @@
 
   <script src="assets/app.js"></script>
   <script>
-    // === Control Page Logic ===
     let activeSession = null;
     const REPERTOIRE_SELECTION_KEY = 'rec_selected_repertoire_for_edit';
 
@@ -253,12 +332,32 @@
     }
 
     function getEditableRepertoireId() {
-      const s = getActiveSession();
-      if (s && s.repertoireId) return s.repertoireId;
       const savedId = localStorage.getItem(REPERTOIRE_SELECTION_KEY);
       if (savedId && App.Repertoire.byId(savedId)) return savedId;
+      const s = getActiveSession();
+      if (s && s.repertoireId && App.Repertoire.byId(s.repertoireId)) return s.repertoireId;
       const first = App.Repertoire.all()[0];
       return first ? first.id : '';
+    }
+
+    function getActiveSessionRepertoireId() {
+      const s = getActiveSession();
+      return s && s.repertoireId ? s.repertoireId : '';
+    }
+
+    function showToast(message, type = 'success') {
+      const prev = document.getElementById('app-toast');
+      if (prev) { clearTimeout(prev._timer); prev.remove(); }
+      const el = document.createElement('div');
+      el.id = 'app-toast';
+      el.className = `toast toast--${type}`;
+      el.textContent = message;
+      document.body.appendChild(el);
+      requestAnimationFrame(() => el.classList.add('toast--visible'));
+      el._timer = setTimeout(() => {
+        el.classList.remove('toast--visible');
+        setTimeout(() => el.remove(), 280);
+      }, 2000);
     }
 
     function setEditableRepertoireId(id) {
@@ -271,56 +370,69 @@
 
     function handleRepertoireSelectionChange() {
       const select = document.getElementById('repertoireSelect');
-      const s = getActiveSession();
-      if (s && s.repertoireId) return;
       setEditableRepertoireId(select.value);
       renderRepertoire();
+    }
+
+    function fillRepertoireSelect(selectId, selectedId = '') {
+      const select = document.getElementById(selectId);
+      if (!select) return;
+      const repertoires = App.Repertoire.all();
+      select.innerHTML = '<option value="">레퍼토리 없음</option>' + repertoires.map(r => `<option value="${r.id}">${r.title}</option>`).join('');
+      select.value = selectedId || '';
+    }
+
+    function formatSessionStatus(status) {
+      if (status === 'active') return '진행중';
+      if (status === 'completed') return '완료';
+      return '준비중';
     }
 
     function renderHeader() {
       const s = getActiveSession();
       const warning = document.getElementById('noSessionWarning');
       const main = document.getElementById('mainContent');
+      main.style.display = 'block';
 
       if (!s) {
         warning.style.display = 'block';
-        main.style.display = 'block';
         document.getElementById('headerSession').textContent = '세션 미선택 · 준비 모드';
-        document.getElementById('headerScore').textContent = '게임리스트/레퍼토리 편집 가능';
+        document.getElementById('headerScore').textContent = '세션 관리 탭에서 세션을 만들거나 활성화해 주세요';
         document.getElementById('headerTitle').textContent = '운영 화면';
         return;
       }
 
       warning.style.display = 'none';
-      main.style.display = 'block';
       document.getElementById('headerSession').textContent = s.title;
       document.getElementById('headerTitle').textContent = s.title;
-
       const scores = App.Session.getScores(s.id);
       document.getElementById('headerScore').textContent = `${s.leftTeamName} ${scores.leftTotal} : ${scores.rightTotal} ${s.rightTeamName}`;
     }
 
-    // === Tab Switching ===
     document.querySelectorAll('.nav-tab').forEach(tab => {
       tab.addEventListener('click', () => {
-        document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        tab.classList.add('active');
-        document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
-        renderTab(tab.dataset.tab);
+        activateTab(tab.dataset.tab);
       });
     });
+
+    function activateTab(tabName) {
+      const allowed = ['games', 'repertoire', 'sessions', 'progress', 'records'];
+      const target = allowed.includes(tabName) ? tabName : 'games';
+      document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === target));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === 'tab-' + target));
+      renderTab(target);
+    }
 
     function renderTab(tab) {
       switch (tab) {
         case 'games': renderGames(); break;
         case 'repertoire': renderRepertoire(); break;
+        case 'sessions': renderSessions(); break;
         case 'progress': renderProgress(); break;
         case 'records': renderRecords(); break;
       }
     }
 
-    // === Games Tab ===
     function renderGames() {
       const games = App.Game.all();
       const html = games.length === 0
@@ -379,7 +491,6 @@
     function saveGame() {
       const name = document.getElementById('gameName').value.trim();
       if (!name) return alert('게임 이름을 입력해 주세요.');
-
       const data = {
         name,
         category: document.getElementById('gameCategory').value.trim(),
@@ -392,41 +503,35 @@
         description: document.getElementById('gameDescription').value.trim(),
         howToPlay: document.getElementById('gameHowToPlay').value.trim(),
       };
-
       const editId = document.getElementById('gameEditId').value;
-      if (editId) {
-        App.Game.update(editId, data);
-      } else {
-        App.Game.create(data);
-      }
+      if (editId) App.Game.update(editId, data);
+      else App.Game.create(data);
       closeModal('gameModal');
       renderGames();
+      renderRepertoire();
+      renderProgress();
     }
 
     function deleteGame(id) {
       if (!confirm('게임을 삭제하시겠습니까?')) return;
       App.Game.delete(id);
       renderGames();
+      renderRepertoire();
+      renderProgress();
     }
 
-    // === Repertoire Tab ===
     function renderRepertoire() {
-      const s = getActiveSession();
       const repertoireId = getEditableRepertoireId();
       const select = document.getElementById('repertoireSelect');
       const repertoires = App.Repertoire.all();
-
       select.innerHTML = repertoires.length === 0
         ? '<option value="">레퍼토리 없음</option>'
         : repertoires.map(r => `<option value="${r.id}">${r.title}</option>`).join('');
-
-      if (repertoireId) {
-        select.value = repertoireId;
-      }
+      if (repertoireId) select.value = repertoireId;
 
       if (repertoires.length === 0 || !repertoireId) {
         document.getElementById('repertoireTitle').textContent = '레퍼토리';
-        document.getElementById('repertoireInfo').textContent = '레퍼토리가 없습니다. 홈에서 새 레퍼토리를 만든 뒤 여기서 편집할 수 있습니다.';
+        document.getElementById('repertoireInfo').textContent = '레퍼토리가 없습니다. 새 레퍼토리를 만들어 주세요.';
         document.getElementById('repertoireItems').innerHTML = '';
         return;
       }
@@ -442,11 +547,8 @@
       document.getElementById('repertoireTitle').textContent = rep.title;
       const totalMin = App.Repertoire.totalEstimatedMinutes(rep.id);
       const materials = App.Repertoire.totalMaterials(rep.id);
-      const scopeLabel = s && s.repertoireId === rep.id
-        ? `현재 활성 세션과 연결됨 · ${s.title}`
-        : '세션과 무관한 준비용 레퍼토리 편집 중';
-      document.getElementById('repertoireInfo').innerHTML =
-        `${scopeLabel}<br>총 ${totalMin}분 예상 · 준비물: ${materials.length > 0 ? materials.join(', ') : '없음'}`;
+      const sessionsUsing = App.Session.all().filter(s => s.repertoireId === rep.id);
+      document.getElementById('repertoireInfo').innerHTML = `연결 세션 ${sessionsUsing.length}개 · 총 ${totalMin}분 예상 · 준비물: ${materials.length > 0 ? materials.join(', ') : '없음'}`;
 
       const items = App.Repertoire.items(rep.id);
       const html = items.length === 0
@@ -472,20 +574,70 @@
       document.getElementById('repertoireItems').innerHTML = html;
     }
 
-    function showAddGameToRepertoire() {
-      const repertoireId = getEditableRepertoireId();
-      if (!repertoireId) return alert('먼저 편집할 레퍼토리를 선택해 주세요.');
+    function showRepertoireForm(id) {
+      const rep = id ? App.Repertoire.byId(id) : null;
+      document.getElementById('repertoireEditId').value = rep ? rep.id : '';
+      document.getElementById('repertoireModalTitle').textContent = rep ? '레퍼토리 수정' : '새 레퍼토리';
+      document.getElementById('repertoireFormTitle').value = rep ? rep.title : '';
+      document.getElementById('repertoireFormAudience').value = rep ? rep.audienceType : 'general';
+      document.getElementById('repertoireFormDescription').value = rep ? rep.description : '';
+      document.getElementById('repertoireModal').classList.remove('hidden');
+    }
 
+    function editSelectedRepertoire() {
+      const repId = getEditableRepertoireId();
+      if (!repId) return alert('수정할 레퍼토리가 없습니다.');
+      showRepertoireForm(repId);
+    }
+
+    function saveRepertoire() {
+      const title = document.getElementById('repertoireFormTitle').value.trim();
+      if (!title) return alert('레퍼토리 제목을 입력해 주세요.');
+      const data = {
+        title,
+        audienceType: document.getElementById('repertoireFormAudience').value,
+        description: document.getElementById('repertoireFormDescription').value.trim(),
+      };
+      const editId = document.getElementById('repertoireEditId').value;
+      let targetId = editId;
+      if (editId) {
+        App.Repertoire.update(editId, data);
+      } else {
+        const created = App.Repertoire.create(data);
+        targetId = created.id;
+      }
+      setEditableRepertoireId(targetId);
+      closeModal('repertoireModal');
+      renderRepertoire();
+      renderSessions();
+    }
+
+    function deleteSelectedRepertoire() {
+      const repId = getEditableRepertoireId();
+      if (!repId) return alert('삭제할 레퍼토리가 없습니다.');
+      const sessionsUsing = App.Session.all().filter(s => s.repertoireId === repId);
+      if (sessionsUsing.length > 0) {
+        return alert('이 레퍼토리를 사용하는 세션이 있습니다. 먼저 세션에서 다른 레퍼토리로 교체해 주세요.');
+      }
+      if (!confirm('레퍼토리와 포함된 순서를 삭제하시겠습니까?')) return;
+      App.Repertoire.delete(repId);
+      const first = App.Repertoire.all()[0];
+      setEditableRepertoireId(first ? first.id : '');
+      renderRepertoire();
+      renderSessions();
+    }
+
+    function openAddGameModalForRepertoire(repertoireId) {
+      if (!repertoireId) return alert('먼저 레퍼토리를 선택해 주세요.');
       const games = App.Game.all();
       if (games.length === 0) return alert('먼저 게임리스트에 게임을 추가해 주세요.');
       const select = document.getElementById('repItemGameSelect');
+      document.getElementById('repItemTargetRepertoireId').value = repertoireId;
       select.innerHTML = games.map(g => `<option value="${g.id}">${g.name} (${g.scoringMode === 'per_question' ? `문제당 ${g.defaultPointsPerQuestion || g.defaultPoints}점` : `${g.defaultPoints}점`})</option>`).join('');
-
       if (games.length > 0) {
         document.getElementById('repItemPoints').value = games[0].scoringMode === 'per_question' ? (games[0].defaultPointsPerQuestion || games[0].defaultPoints) : games[0].defaultPoints;
         document.getElementById('repItemMinutes').value = games[0].estimatedMinutes;
       }
-
       select.onchange = () => {
         const g = App.Game.byId(select.value);
         if (g) {
@@ -493,14 +645,22 @@
           document.getElementById('repItemMinutes').value = g.estimatedMinutes;
         }
       };
-
       document.getElementById('addRepItemModal').classList.remove('hidden');
     }
 
-    function addGameToRepertoire() {
-      const repertoireId = getEditableRepertoireId();
-      if (!repertoireId) return;
+    function showAddGameToRepertoire() {
+      openAddGameModalForRepertoire(getEditableRepertoireId());
+    }
 
+    function showAddGameToActiveSessionRepertoire() {
+      const repId = getActiveSessionRepertoireId();
+      if (!repId) return alert('활성 세션에 연결된 레퍼토리가 없습니다. 세션 관리 탭에서 먼저 레퍼토리를 지정해 주세요.');
+      openAddGameModalForRepertoire(repId);
+    }
+
+    function addGameToRepertoire() {
+      const repertoireId = document.getElementById('repItemTargetRepertoireId').value;
+      if (!repertoireId) return;
       const gameId = document.getElementById('repItemGameSelect').value;
       App.Repertoire.addItem(repertoireId, gameId, {
         customPoints: Number(document.getElementById('repItemPoints').value) || 10,
@@ -508,6 +668,7 @@
       });
       closeModal('addRepItemModal');
       renderRepertoire();
+      renderProgress();
     }
 
     function moveRepItemUp(id) {
@@ -516,11 +677,11 @@
       const items = App.Repertoire.items(repertoireId);
       const idx = items.findIndex(i => i.id === id);
       if (idx <= 0) return;
-      // swap orderIndex
       const temp = items[idx].orderIndex;
       App.RepertoireItem.update(items[idx].id, { orderIndex: items[idx - 1].orderIndex });
       App.RepertoireItem.update(items[idx - 1].id, { orderIndex: temp });
       renderRepertoire();
+      renderProgress();
     }
 
     function moveRepItemDown(id) {
@@ -533,15 +694,119 @@
       App.RepertoireItem.update(items[idx].id, { orderIndex: items[idx + 1].orderIndex });
       App.RepertoireItem.update(items[idx + 1].id, { orderIndex: temp });
       renderRepertoire();
+      renderProgress();
     }
 
     function removeRepItem(id) {
       if (!confirm('이 게임을 레퍼토리에서 제거하시겠습니까?')) return;
       App.Repertoire.removeItem(id);
       renderRepertoire();
+      renderProgress();
     }
 
-    // === Progress Tab ===
+    function renderSessions() {
+      const sessions = App.Session.all().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      const active = getActiveSession();
+      fillRepertoireSelect('sessionRepertoire');
+      if (!document.getElementById('sessionDate').value) {
+        document.getElementById('sessionDate').value = new Date().toISOString().slice(0, 10);
+      }
+      const html = sessions.length === 0
+        ? '<div class="empty-state">등록된 세션이 없습니다. 새 세션을 만들어 주세요.</div>'
+        : sessions.map(s => {
+            const scores = App.Session.getScores(s.id);
+            const repertoire = s.repertoireId ? App.Repertoire.byId(s.repertoireId) : null;
+            const isActive = active && active.id === s.id;
+            return `
+              <div class="game-item session-list-item">
+                <div class="game-info">
+                  <div class="game-name">${isActive ? '🔵 ' : ''}${s.title}</div>
+                  <div class="game-meta">${s.date || '-'} · ${repertoire ? repertoire.title : '레퍼토리 없음'} · ${s.leftTeamName} ${scores.leftTotal} : ${scores.rightTotal} ${s.rightTeamName}</div>
+                  <div class="text-sm text-muted mt-1">상태: ${formatSessionStatus(s.status)}</div>
+                </div>
+                <div class="game-actions">
+                  <button class="btn btn--outline btn--sm" onclick="setActiveSessionOnly('${s.id}')">${isActive ? '현재 세션' : '활성 선택'}</button>
+                  <button class="btn btn--primary btn--sm" onclick="openSession('${s.id}')">진행 열기</button>
+                  <button class="btn btn--outline btn--sm" onclick="editSession('${s.id}')">수정</button>
+                  <button class="btn btn--danger btn--sm" onclick="deleteSession('${s.id}')">삭제</button>
+                </div>
+              </div>
+            `;
+          }).join('');
+      document.getElementById('sessionList').innerHTML = html;
+    }
+
+    function showSessionForm(id) {
+      const session = id ? App.Session.byId(id) : null;
+      fillRepertoireSelect('sessionRepertoire', session ? session.repertoireId : getEditableRepertoireId());
+      document.getElementById('sessionEditId').value = session ? session.id : '';
+      document.getElementById('sessionModalTitle').textContent = session ? '세션 수정' : '새 세션';
+      document.getElementById('sessionTitle').value = session ? session.title : '';
+      document.getElementById('sessionLeftTeam').value = session ? session.leftTeamName : '파란 팀';
+      document.getElementById('sessionRightTeam').value = session ? session.rightTeamName : '빨간 팀';
+      document.getElementById('sessionDate').value = session ? (session.date || '') : new Date().toISOString().slice(0, 10);
+      document.getElementById('sessionStatus').value = session ? (session.status || 'planning') : 'planning';
+      document.getElementById('sessionSetActive').checked = !session || (App.Session.getActive() && App.Session.getActive().id === session.id);
+      document.getElementById('sessionModal').classList.remove('hidden');
+    }
+
+    function editSession(id) { showSessionForm(id); }
+
+    function saveSession() {
+      const title = document.getElementById('sessionTitle').value.trim();
+      if (!title) return alert('세션 제목을 입력해 주세요.');
+      const data = {
+        title,
+        repertoireId: document.getElementById('sessionRepertoire').value,
+        leftTeamName: document.getElementById('sessionLeftTeam').value.trim() || '파란 팀',
+        rightTeamName: document.getElementById('sessionRightTeam').value.trim() || '빨간 팀',
+        date: document.getElementById('sessionDate').value,
+        status: document.getElementById('sessionStatus').value,
+      };
+      const editId = document.getElementById('sessionEditId').value;
+      let targetId = editId;
+      if (editId) {
+        App.Session.update(editId, data);
+      } else {
+        const created = App.Session.create(data);
+        targetId = created.id;
+      }
+      if (document.getElementById('sessionSetActive').checked) App.Session.setActive(targetId);
+      closeModal('sessionModal');
+      renderHeader();
+      renderSessions();
+      renderProgress();
+      renderRecords();
+      renderRepertoire();
+    }
+
+    function setActiveSessionOnly(id) {
+      App.Session.setActive(id);
+      renderHeader();
+      renderSessions();
+      renderProgress();
+      renderRecords();
+      renderRepertoire();
+    }
+
+    function openSession(id) {
+      App.Session.setActive(id);
+      renderHeader();
+      activateTab('progress');
+      history.replaceState(null, '', 'control.html?tab=progress');
+    }
+
+    function deleteSession(id) {
+      if (!confirm('세션을 삭제하시겠습니까? 기록도 함께 삭제됩니다.')) return;
+      const active = App.Session.getActive();
+      App.Session.delete(id);
+      if (active && active.id === id) App.Session.clearActive();
+      renderHeader();
+      renderSessions();
+      renderProgress();
+      renderRecords();
+    }
+
     function updateProgressBottomBar(session, items = [], scores = null, currentIndex = 0) {
       const bar = document.getElementById('progressBottomBar');
       const main = document.getElementById('progressBottomMain');
@@ -568,18 +833,85 @@
       return records.length > 0 ? records[records.length - 1] : null;
     }
 
+    function renderCurrentGameControls(session, item, game) {
+      const isQuizMode = game && game.scoringMode === 'per_question';
+      if (!item || !game) return '';
+      const pts = item.customPoints;
+      const lName = session.leftTeamName;
+      const rName = session.rightTeamName;
+      return `
+        <div class="current-game-controls">
+          <div class="text-sm" style="color:#0f3460; font-weight:700; margin-bottom:10px;">종료 버튼을 눌러야 다음 게임으로 넘어갑니다.</div>
+          ${isQuizMode ? `
+            <div class="cg-quiz-row">
+              <div class="cg-quiz-team">
+                <div class="cg-team-label left">${lName}</div>
+                <div class="cg-stepper">
+                  <button class="btn btn--outline btn--sm" onclick="stepQuizCorrect('${item.id}', 'left', -1)">−</button>
+                  <input class="form-input cg-quiz-input" type="number" id="quiz-left-correct-${item.id}" value="0" min="0">
+                  <button class="btn btn--success btn--sm" onclick="stepQuizCorrect('${item.id}', 'left', 1)">+</button>
+                </div>
+              </div>
+              <div class="cg-quiz-vs">VS</div>
+              <div class="cg-quiz-team">
+                <div class="cg-team-label right">${rName}</div>
+                <div class="cg-stepper">
+                  <button class="btn btn--outline btn--sm" onclick="stepQuizCorrect('${item.id}', 'right', -1)">−</button>
+                  <input class="form-input cg-quiz-input" type="number" id="quiz-right-correct-${item.id}" value="0" min="0">
+                  <button class="btn btn--danger btn--sm" onclick="stepQuizCorrect('${item.id}', 'right', 1)">+</button>
+                </div>
+              </div>
+            </div>
+            <button class="btn btn--primary btn--block" style="margin-bottom:12px;" onclick="recordQuizResult('${item.id}', ${pts})">퀴즈 점수 저장 (문제당 ${pts}점)</button>
+          ` : `
+            <div class="cg-win-row">
+              <button class="btn btn--success cg-win-btn" onclick="recordResult('${item.id}', ${pts}, 'left_win')">${lName} 승<span class="cg-pts">+${pts}점</span></button>
+              <button class="btn btn--danger cg-win-btn" onclick="recordResult('${item.id}', ${pts}, 'right_win')">${rName} 승<span class="cg-pts">+${pts}점</span></button>
+            </div>
+            <div class="cg-draw-row">
+              <button class="btn btn--outline" onclick="recordResult('${item.id}', ${pts}, 'draw_zero')">동점 (0점)</button>
+              <button class="btn btn--outline" onclick="recordResult('${item.id}', ${pts}, 'draw_half')">동점 절반 (+${Math.round(pts / 2)}점)</button>
+            </div>
+          `}
+          <div class="cg-bonus-section">
+            <div class="text-sm" style="font-weight:700; color:#555; margin-bottom:8px;">보너스 점수</div>
+            <div class="cg-bonus-row">
+              <span class="cg-bonus-label left">${lName}</span>
+              <button class="btn btn--success btn--sm" onclick="recordBonus('${item.id}', 10, 'left')">+10</button>
+              <button class="btn btn--success btn--sm" onclick="recordBonus('${item.id}', 20, 'left')">+20</button>
+              <button class="btn btn--success btn--sm" onclick="recordBonus('${item.id}', 30, 'left')">+30</button>
+            </div>
+            <div class="cg-bonus-row">
+              <span class="cg-bonus-label right">${rName}</span>
+              <button class="btn btn--danger btn--sm" onclick="recordBonus('${item.id}', 10, 'right')">+10</button>
+              <button class="btn btn--danger btn--sm" onclick="recordBonus('${item.id}', 20, 'right')">+20</button>
+              <button class="btn btn--danger btn--sm" onclick="recordBonus('${item.id}', 30, 'right')">+30</button>
+            </div>
+          </div>
+          <div class="cg-end-row">
+            <button class="btn btn--outline" onclick="undoCurrentItemRecord('${item.id}')">방금 취소</button>
+            <button class="btn btn--outline" onclick="resetCurrentGame('${item.id}')">다시 시작</button>
+          </div>
+          <div class="cg-end-row" style="margin-top:8px;">
+            <button class="btn btn--secondary" onclick="completeCurrentGame('${item.id}')">종료 →</button>
+            <button class="btn btn--primary" onclick="completeAndRepeatGame('${item.id}')">종료 및 한 번 더</button>
+          </div>
+        </div>
+      `;
+    }
+
     function renderProgress() {
       const s = getActiveSession();
       if (!s) {
         document.getElementById('progressSummary').textContent = '';
-        document.getElementById('progressGuide').innerHTML = '<div style="font-weight:700; margin-bottom:6px;">진행 시작 전 안내</div><div class="text-sm text-muted">홈에서 세션을 만든 뒤 다시 오시면, 현재 게임 카드에 점수 버튼이 나타납니다.</div>';
-        document.getElementById('progressGames').innerHTML = '<div class="empty-state">진행 탭은 실제 행사 세션을 선택한 뒤 사용합니다.</div>';
+        document.getElementById('progressGuide').innerHTML = '<div style="font-weight:700; margin-bottom:6px;">진행 시작 전 안내</div><div class="text-sm text-muted">세션 관리 탭에서 세션을 만든 뒤 활성 세션으로 선택해 주세요.</div>';
+        document.getElementById('progressGames').innerHTML = '<div class="empty-state">진행 탭은 활성 세션이 있을 때 사용합니다.</div>';
         updateProgressBottomBar(null);
         return;
       }
 
       if (!s.repertoireId) {
-        document.getElementById('progressGuide').innerHTML = '<div style="font-weight:700; margin-bottom:6px;">진행 시작 전 안내</div><div class="text-sm text-muted">이 세션에는 레퍼토리가 연결되지 않았습니다. 홈에서 세션을 다시 만들거나 레퍼토리를 지정해 주세요.</div>';
+        document.getElementById('progressGuide').innerHTML = '<div style="font-weight:700; margin-bottom:6px;">진행 시작 전 안내</div><div class="text-sm text-muted">이 세션에는 레퍼토리가 연결되지 않았습니다. 세션 관리 탭에서 레퍼토리를 지정해 주세요.</div>';
         document.getElementById('progressGames').innerHTML = '<div class="empty-state">레퍼토리가 연결되지 않았습니다.</div>';
         updateProgressBottomBar(s, [], App.Session.getScores(s.id), 0);
         return;
@@ -593,8 +925,7 @@
       const currentItem = currentIndex >= 0 ? items[currentIndex] : null;
       const currentGame = currentItem ? App.Game.byId(currentItem.gameId) : null;
 
-      document.getElementById('progressSummary').textContent =
-        `${items.length}개 게임 · 기록 ${scores.recordCount}건 · ${s.leftTeamName} ${scores.leftTotal} : ${scores.rightTotal} ${s.rightTeamName}`;
+      document.getElementById('progressSummary').textContent = `${items.length}개 게임 · 기록 ${scores.recordCount}건 · ${s.leftTeamName} ${scores.leftTotal} : ${scores.rightTotal} ${s.rightTeamName}`;
 
       if (items.length === 0) {
         document.getElementById('progressGuide').innerHTML = '<div style="font-weight:700; margin-bottom:6px;">진행 시작 전 안내</div><div class="text-sm text-muted">먼저 레퍼토리에 게임을 추가해 주세요.</div>';
@@ -604,18 +935,24 @@
       }
 
       document.getElementById('progressGuide').innerHTML = currentItem
-        ? `<div style="font-weight:700; margin-bottom:6px;">게임 진행 방법</div><div class="text-sm" style="color:#335;">점수 버튼과 응원점수는 여러 번 눌러도 게임이 끝나지 않습니다. <strong>종료</strong> 또는 <strong>종료 및 한 번 더</strong>를 눌러야 다음 단계로 넘어갑니다. 현재 게임은 <strong>${currentGame ? currentGame.name : '알 수 없음'}</strong>입니다.</div>`
-        : `<div style="font-weight:700; margin-bottom:6px;">진행 완료</div><div class="text-sm text-muted">레퍼토리의 모든 게임이 종료되었습니다. 필요하면 완료 카드에서 결과 수정 또는 다시 진행을 사용할 수 있습니다.</div>`;
+        ? `<div style="font-weight:700; margin-bottom:6px;">게임 진행 방법</div><div class="text-sm" style="color:#335;">점수 저장과 게임 종료를 분리했습니다. <strong>보너스 점수</strong>와 일반 점수는 여러 번 저장할 수 있고, <strong>종료</strong> 또는 <strong>종료 및 한 번 더</strong>를 눌러야 다음 게임으로 넘어갑니다.</div>`
+        : `<div style="font-weight:700; margin-bottom:6px;">진행 완료</div><div class="text-sm text-muted">모든 게임이 종료되었습니다. 완료 카드의 결과 수정이나 다시 진행으로 조정할 수 있습니다.</div>`;
 
-      const html = items.map((item, idx) => {
+      // 현재 게임을 최상단으로 정렬: 진행 중 → 대기 → 완료
+      const displayItems = [
+        ...items.filter(i => currentItem && i.id === currentItem.id),
+        ...items.filter(i => !completedIds.has(i.id) && !(currentItem && i.id === currentItem.id)),
+        ...items.filter(i => completedIds.has(i.id)),
+      ];
+
+      const html = displayItems.map((item) => {
+        const idx = items.findIndex(i => i.id === item.id);
         const game = App.Game.byId(item.gameId);
         const gameRecords = records.filter(r => r.repertoireItemId === item.id);
         const latestEditable = getLatestEditableRecordForItem(s.id, item.id);
         const isCompleted = completedIds.has(item.id);
         const isCurrent = !!currentItem && currentItem.id === item.id;
         const statusClass = isCompleted ? 'completed' : isCurrent ? 'current' : 'upcoming';
-        const isQuizMode = game && game.scoringMode === 'per_question';
-
         return `
           <div class="progress-game-card ${statusClass}">
             <div class="flex-between">
@@ -624,55 +961,14 @@
                 <strong>${game ? game.name : '(알 수 없음)'}</strong>
                 ${isCompleted ? `<span class="badge badge--green">완료</span>` : isCurrent ? `<span class="badge badge--red">진행 중</span>` : `<span class="badge badge--gray">대기</span>`}
               </div>
-              <div class="text-sm text-muted">${isQuizMode ? `문제당 ${item.customPoints}점` : `${item.customPoints}점`} · ${item.customEstimatedMinutes}분</div>
+              <div class="text-sm text-muted">${game && game.scoringMode === 'per_question' ? `문제당 ${item.customPoints}점` : `${item.customPoints}점`} · ${item.customEstimatedMinutes}분</div>
             </div>
             ${gameRecords.length > 0 ? `
               <div class="text-sm text-muted mt-1">
                 ${gameRecords.map(r => `${formatRecordSummary(r, s)} (${r.leftPoints}:${r.rightPoints})`).join(' / ')}
               </div>
             ` : '<div class="text-sm text-muted mt-1">아직 저장된 점수가 없습니다.</div>'}
-            ${isCurrent ? `
-              <div class="mt-1" style="font-weight:700; color:#0f3460;">이 게임은 직접 종료하기 전까지 계속 진행됩니다.</div>
-              ${isQuizMode ? `
-                <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; margin-top:12px;">
-                  <div class="form-group">
-                    <label class="form-label">총 문제 수</label>
-                    <input class="form-input" type="number" id="quiz-question-count-${item.id}" value="0" min="0">
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">${s.leftTeamName} 정답 수</label>
-                    <input class="form-input" type="number" id="quiz-left-correct-${item.id}" value="0" min="0">
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">${s.rightTeamName} 정답 수</label>
-                    <input class="form-input" type="number" id="quiz-right-correct-${item.id}" value="0" min="0">
-                  </div>
-                </div>
-                <div class="text-sm text-muted mt-1">문제당 ${item.customPoints}점 기준으로 누적 저장됩니다.</div>
-                <div class="result-buttons">
-                  <button class="btn btn--primary" onclick="recordQuizResult('${item.id}', ${item.customPoints})">퀴즈 점수 저장</button>
-                </div>
-              ` : `
-                <div class="result-buttons">
-                  <button class="btn btn--success" onclick="recordResult('${item.id}', ${item.customPoints}, 'left_win')">${s.leftTeamName} 점수 저장</button>
-                  <button class="btn btn--danger" onclick="recordResult('${item.id}', ${item.customPoints}, 'right_win')">${s.rightTeamName} 점수 저장</button>
-                  <button class="btn btn--outline" onclick="recordResult('${item.id}', ${item.customPoints}, 'draw_zero')">동점 0 저장</button>
-                  <button class="btn btn--outline" onclick="recordResult('${item.id}', ${item.customPoints}, 'draw_half')">동점 ½ 저장</button>
-                </div>
-              `}
-              <div class="bonus-buttons">
-                <button class="btn btn--success btn--sm" onclick="recordBonus('${item.id}', 10, 'left')">좌 +10</button>
-                <button class="btn btn--success btn--sm" onclick="recordBonus('${item.id}', 20, 'left')">좌 +20</button>
-                <button class="btn btn--success btn--sm" onclick="recordBonus('${item.id}', 30, 'left')">좌 +30</button>
-                <button class="btn btn--danger btn--sm" onclick="recordBonus('${item.id}', 10, 'right')">우 +10</button>
-                <button class="btn btn--danger btn--sm" onclick="recordBonus('${item.id}', 20, 'right')">우 +20</button>
-                <button class="btn btn--danger btn--sm" onclick="recordBonus('${item.id}', 30, 'right')">우 +30</button>
-              </div>
-              <div class="result-buttons" style="margin-top:14px;">
-                <button class="btn btn--secondary" onclick="completeCurrentGame('${item.id}')">종료</button>
-                <button class="btn btn--primary" onclick="completeAndRepeatGame('${item.id}')">종료 및 한 번 더</button>
-              </div>
-            ` : isCompleted ? `
+            ${isCurrent ? renderCurrentGameControls(s, item, game) : isCompleted ? `
               <div class="result-buttons" style="margin-top:12px;">
                 ${latestEditable ? `<button class="btn btn--outline" onclick="editRecord('${latestEditable.id}')">결과 수정</button>` : ''}
                 <button class="btn btn--outline" onclick="reopenCompletedGame('${item.id}')">다시 진행</button>
@@ -685,66 +981,82 @@
       updateProgressBottomBar(s, items, scores, currentIndex >= 0 ? currentIndex : items.length);
     }
 
-    function recordResult(itemIdx, points, resultType) {
+    function stepQuizCorrect(itemId, side, delta) {
+      const input = document.getElementById(`quiz-${side}-correct-${itemId}`);
+      if (!input) return;
+      const next = Math.max(0, (Number(input.value) || 0) + delta);
+      input.value = next;
+    }
+
+    function recordResult(itemId, points, resultType) {
       const s = getActiveSession();
       if (!s) return;
       const { leftPoints, rightPoints } = App.calculatePoints(resultType, points);
       const roundNum = App.Record.bySession(s.id).length + 1;
-      App.Record.create({
-        sessionId: s.id,
-        repertoireItemId: itemIdx,
-        roundNumber: roundNum,
-        resultType,
-        pointsUsed: points,
-        leftPoints,
-        rightPoints,
-      });
+      App.Record.create({ sessionId: s.id, repertoireItemId: itemId, roundNumber: roundNum, resultType, pointsUsed: points, leftPoints, rightPoints });
+      const msg = resultType === 'left_win' ? `${s.leftTeamName} 승 +${points}점` :
+                  resultType === 'right_win' ? `${s.rightTeamName} 승 +${points}점` :
+                  resultType === 'draw_zero' ? '동점 (0점) 저장' : '동점 절반 저장';
+      showToast(msg);
       renderHeader();
       renderProgress();
       renderRecords();
     }
 
-    function recordBonus(itemIdx, points, side) {
+    function recordBonus(itemId, points, side) {
       const s = getActiveSession();
       if (!s) return;
       const resultType = side === 'left' ? 'bonus_left' : 'bonus_right';
       const roundNum = App.Record.bySession(s.id).length + 1;
-      App.Record.create({
-        sessionId: s.id,
-        repertoireItemId: itemIdx,
-        roundNumber: roundNum,
-        resultType,
-        pointsUsed: points,
-        leftPoints: side === 'left' ? points : 0,
-        rightPoints: side === 'right' ? points : 0,
-      });
+      App.Record.create({ sessionId: s.id, repertoireItemId: itemId, roundNumber: roundNum, resultType, pointsUsed: points, leftPoints: side === 'left' ? points : 0, rightPoints: side === 'right' ? points : 0 });
+      showToast(`${side === 'left' ? s.leftTeamName : s.rightTeamName} 보너스 +${points}점`);
       renderHeader();
       renderProgress();
       renderRecords();
     }
 
-    function recordQuizResult(itemIdx, pointsPerQuestion) {
+    function recordQuizResult(itemId, pointsPerQuestion) {
       const s = getActiveSession();
       if (!s) return;
-      const questionCount = Number(document.getElementById(`quiz-question-count-${itemIdx}`).value) || 0;
-      const correctCountLeft = Number(document.getElementById(`quiz-left-correct-${itemIdx}`).value) || 0;
-      const correctCountRight = Number(document.getElementById(`quiz-right-correct-${itemIdx}`).value) || 0;
-      if (questionCount <= 0) return alert('총 문제 수를 입력해 주세요.');
-      if (correctCountLeft + correctCountRight > questionCount) return alert('정답 수 합계가 총 문제 수보다 많습니다.');
+      const correctCountLeft = Number(document.getElementById(`quiz-left-correct-${itemId}`).value) || 0;
+      const correctCountRight = Number(document.getElementById(`quiz-right-correct-${itemId}`).value) || 0;
+      if (correctCountLeft < 0 || correctCountRight < 0) return alert('정답 수는 0 이상이어야 합니다.');
       const { leftPoints, rightPoints } = App.calculateQuizPoints(pointsPerQuestion, correctCountLeft, correctCountRight);
       const roundNum = App.Record.bySession(s.id).length + 1;
       App.Record.create({
         sessionId: s.id,
-        repertoireItemId: itemIdx,
+        repertoireItemId: itemId,
         roundNumber: roundNum,
         resultType: 'quiz_round',
         pointsUsed: pointsPerQuestion,
-        questionCount,
         correctCountLeft,
         correctCountRight,
         leftPoints,
         rightPoints,
       });
+      showToast(`퀴즈 저장 · 좌 ${correctCountLeft}개 / 우 ${correctCountRight}개`);
+      renderHeader();
+      renderProgress();
+      renderRecords();
+    }
+
+    function undoCurrentItemRecord(itemId) {
+      const s = getActiveSession();
+      if (!s) return;
+      const deleted = App.Record.deleteLatestByItem(s.id, itemId);
+      if (!deleted) return alert('이 게임에서 취소할 점수가 없습니다.');
+      showToast('방금 점수 취소됨', 'undo');
+      renderHeader();
+      renderProgress();
+      renderRecords();
+    }
+
+    function resetCurrentGame(itemId) {
+      const s = getActiveSession();
+      if (!s) return;
+      if (!confirm('현재 게임의 저장 점수를 모두 지우고 다시 시작하시겠습니까?')) return;
+      App.Record.deleteByItem(s.id, itemId);
+      App.Session.reopenItem(s.id, itemId);
       renderHeader();
       renderProgress();
       renderRecords();
@@ -784,18 +1096,16 @@
       renderRecords();
     }
 
-    // === Records Tab ===
     function renderRecords() {
       const s = getActiveSession();
       if (!s) {
-        document.getElementById('recordsList').innerHTML = '<div class="empty-state">기록 탭은 실제 행사 세션이 시작된 뒤 사용합니다.</div>';
+        document.getElementById('recordsList').innerHTML = '<div class="empty-state">기록 탭은 활성 세션이 있을 때 사용합니다.</div>';
         return;
       }
-
-      const records = App.Record.bySession(s.id).reverse(); // newest first
+      const records = App.Record.bySession(s.id).reverse();
       const html = records.length === 0
         ? '<div class="empty-state">아직 기록이 없습니다.</div>'
-        : records.map((r, idx) => {
+        : records.map(r => {
             const item = r.repertoireItemId ? App.RepertoireItem.byId(r.repertoireItemId) : null;
             const game = item ? App.Game.byId(item.gameId) : null;
             const label = formatRecordSummary(r, s);
@@ -822,13 +1132,10 @@
       const s = getActiveSession();
       if (!s) return;
       const deleted = App.Record.deleteLatest(s.id);
-      if (deleted) {
-        renderHeader();
-        renderProgress();
-        renderRecords();
-      } else {
-        alert('취소할 기록이 없습니다.');
-      }
+      if (!deleted) return alert('취소할 기록이 없습니다.');
+      renderHeader();
+      renderProgress();
+      renderRecords();
     }
 
     function editRecord(id) {
@@ -837,7 +1144,6 @@
       document.getElementById('editRecordId').value = r.id;
       document.getElementById('editRecordResult').value = r.resultType;
       document.getElementById('editRecordPoints').value = r.pointsUsed;
-      document.getElementById('editRecordQuestionCount').value = r.questionCount || 0;
       document.getElementById('editRecordCorrectLeft').value = r.correctCountLeft || 0;
       document.getElementById('editRecordCorrectRight').value = r.correctCountRight || 0;
       document.getElementById('editRecordNote').value = r.note || '';
@@ -849,21 +1155,17 @@
       const id = document.getElementById('editRecordId').value;
       const resultType = document.getElementById('editRecordResult').value;
       const pointsUsed = Number(document.getElementById('editRecordPoints').value) || 0;
-      const questionCount = Number(document.getElementById('editRecordQuestionCount').value) || 0;
       const correctCountLeft = Number(document.getElementById('editRecordCorrectLeft').value) || 0;
       const correctCountRight = Number(document.getElementById('editRecordCorrectRight').value) || 0;
       const note = document.getElementById('editRecordNote').value.trim();
       let leftPoints = 0;
       let rightPoints = 0;
       if (resultType === 'quiz_round') {
-        if (questionCount <= 0) return alert('총 문제 수를 입력해 주세요.');
-        if (correctCountLeft + correctCountRight > questionCount) return alert('정답 수 합계가 총 문제 수보다 많습니다.');
         ({ leftPoints, rightPoints } = App.calculateQuizPoints(pointsUsed, correctCountLeft, correctCountRight));
       } else {
         ({ leftPoints, rightPoints } = App.calculatePoints(resultType, pointsUsed));
       }
-
-      App.Record.update(id, { resultType, pointsUsed, questionCount, correctCountLeft, correctCountRight, leftPoints, rightPoints, note });
+      App.Record.update(id, { resultType, pointsUsed, correctCountLeft, correctCountRight, leftPoints, rightPoints, note });
       closeModal('editRecordModal');
       renderHeader();
       renderProgress();
@@ -871,26 +1173,25 @@
     }
 
     function formatRecordSummary(record, session) {
-      if (record.resultType === 'quiz_round') return `퀴즈 ${record.questionCount || 0}문제 · ${session.leftTeamName} ${record.correctCountLeft || 0} / ${session.rightTeamName} ${record.correctCountRight || 0}`;
+      if (record.resultType === 'quiz_round') return `퀴즈 · ${session.leftTeamName} ${record.correctCountLeft || 0} / ${session.rightTeamName} ${record.correctCountRight || 0}`;
       if (record.resultType === 'left_win') return `${session.leftTeamName} 승`;
       if (record.resultType === 'right_win') return `${session.rightTeamName} 승`;
       if (record.resultType === 'draw_zero') return '동점 (0점)';
       if (record.resultType === 'draw_half') return '동점 (절반)';
-      if (record.resultType === 'bonus_left') return `${session.leftTeamName} 응원 +${record.leftPoints}`;
-      return `${session.rightTeamName} 응원 +${record.rightPoints}`;
+      if (record.resultType === 'bonus_left') return `${session.leftTeamName} 보너스 +${record.leftPoints}`;
+      return `${session.rightTeamName} 보너스 +${record.rightPoints}`;
     }
 
     function toggleEditQuizFields(show) {
       const wrap = document.getElementById('editQuizFields');
       if (!wrap) return;
-      wrap.style.display = show ? 'grid' : 'none';
+      wrap.classList.toggle('hidden', !show);
     }
 
     document.getElementById('editRecordResult').addEventListener('change', (e) => {
       toggleEditQuizFields(e.target.value === 'quiz_round');
     });
 
-    // === Modal ===
     function closeModal(id) {
       document.getElementById(id).classList.add('hidden');
     }
@@ -901,14 +1202,6 @@
       });
     });
 
-    function activateTab(tabName) {
-      const target = ['games', 'repertoire', 'progress', 'records'].includes(tabName) ? tabName : 'games';
-      document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === target));
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === 'tab-' + target));
-      renderTab(target);
-    }
-
-    // === Init ===
     renderHeader();
     activateTab(new URLSearchParams(location.search).get('tab') || 'games');
   </script>

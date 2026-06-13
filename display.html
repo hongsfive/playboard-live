@@ -111,13 +111,13 @@
           const item = latest.repertoireItemId ? App.RepertoireItem.byId(latest.repertoireItemId) : null;
           const game = item ? App.Game.byId(item.gameId) : null;
           const label = latest.resultType === 'quiz_round'
-                        ? `퀴즈 ${latest.questionCount || 0}문제 · ${s.leftTeamName} ${latest.correctCountLeft || 0} / ${s.rightTeamName} ${latest.correctCountRight || 0}`
+                        ? `퀴즈 · ${s.leftTeamName} ${latest.correctCountLeft || 0} / ${s.rightTeamName} ${latest.correctCountRight || 0}`
                         : latest.resultType === 'left_win' ? `${s.leftTeamName} 승` :
                         latest.resultType === 'right_win' ? `${s.rightTeamName} 승` :
                         latest.resultType === 'draw_zero' ? '동점 (0점)' :
                         latest.resultType === 'draw_half' ? '동점 (절반)' :
-                        latest.resultType === 'bonus_left' ? `${s.leftTeamName} +${latest.leftPoints}` :
-                        `${s.rightTeamName} +${latest.rightPoints}`;
+                        latest.resultType === 'bonus_left' ? `${s.leftTeamName} 보너스 +${latest.leftPoints}` :
+                        `${s.rightTeamName} 보너스 +${latest.rightPoints}`;
           document.getElementById('recentRecord').textContent =
             `최근: ${game ? game.name : ''} — ${label} (${latest.leftPoints}:${latest.rightPoints})`;
         } else {

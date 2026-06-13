@@ -209,7 +209,7 @@ const Session = {
       leftTeamName: data.leftTeamName || 'Left Team',
       rightTeamName: data.rightTeamName || 'Right Team',
       completedItemIds: [],
-      status: 'planning', // planning | active | completed
+      status: data.status || 'planning', // planning | active | completed
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
@@ -219,6 +219,9 @@ const Session = {
   delete(id) {
     remove(STORAGE_KEYS.SESSIONS, id);
     Record.bySession(id).forEach(r => Record.delete(r.id));
+  },
+  replaceRepertoire(sessionId, repertoireId) {
+    return this.update(sessionId, { repertoireId: repertoireId || '' });
   },
   setActive(id) { localStorage.setItem(STORAGE_KEYS.ACTIVE_SESSION, id); },
   getActive() {
@@ -284,6 +287,18 @@ const Record = {
     const latest = records[records.length - 1];
     this.delete(latest.id);
     return latest;
+  },
+  deleteLatestByItem(sessionId, repertoireItemId) {
+    const records = this.bySession(sessionId).filter(r => r.repertoireItemId === repertoireItemId);
+    if (records.length === 0) return null;
+    const latest = records[records.length - 1];
+    this.delete(latest.id);
+    return latest;
+  },
+  deleteByItem(sessionId, repertoireItemId) {
+    const records = this.bySession(sessionId).filter(r => r.repertoireItemId === repertoireItemId);
+    records.forEach(r => this.delete(r.id));
+    return records.length;
   },
 };
 

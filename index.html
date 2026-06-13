@@ -7,278 +7,40 @@
   <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-  <div class="container">
-    <!-- Header -->
-    <div class="app-header" style="border-radius:0 0 8px 8px; margin-bottom:24px;">
-      <h1>🎯 레크레이션 운영 앱</h1>
-      <span class="session-info" id="activeSessionLabel">활성 세션 없음</span>
+  <div class="container" style="max-width:720px;">
+    <div class="app-header" style="border-radius:0 0 12px 12px; margin-bottom:24px;">
+      <div>
+        <h1>🎯 레크레이션 운영 앱</h1>
+        <div class="session-info">메인 화면은 빠른 진입만 제공합니다.</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="session-info" id="activeSessionLabel">활성 세션 없음</div>
+      </div>
     </div>
 
-    <!-- Quick Navigation -->
-    <div class="grid grid--2 mb-2">
-      <a href="control.html" class="card card--clickable text-center" style="padding:24px;">
-        <div style="font-size:2rem; margin-bottom:8px;">🎮</div>
-        <div style="font-weight:600;">운영 화면</div>
-        <div class="text-sm text-muted mt-1">게임리스트 · 레퍼토리 · 진행 · 기록</div>
+    <div class="card" style="margin-bottom:16px; background:#f8fbff; border:1px solid #d6e6ff;">
+      <div style="font-weight:700; margin-bottom:6px;">사용 흐름</div>
+      <div class="text-sm text-muted">운영 화면에서 게임리스트 · 레퍼토리 · 세션 관리까지 모두 진행하고, 관객 점수판은 별도 화면으로 띄우면 됩니다.</div>
+    </div>
+
+    <div class="grid grid--2">
+      <a href="control.html" class="card card--clickable text-center" style="padding:32px 24px;">
+        <div style="font-size:2.2rem; margin-bottom:10px;">🎮</div>
+        <div style="font-weight:700; font-size:1.1rem;">운영 화면</div>
+        <div class="text-sm text-muted mt-1">게임리스트 · 레퍼토리 · 세션 관리 · 진행 · 기록</div>
       </a>
-      <a href="display.html" target="_blank" class="card card--clickable text-center" style="padding:24px;">
-        <div style="font-size:2rem; margin-bottom:8px;">📺</div>
-        <div style="font-weight:600;">관객 점수판</div>
-        <div class="text-sm text-muted mt-1">읽기 전용 디스플레이</div>
+      <a href="display.html" target="_blank" class="card card--clickable text-center" style="padding:32px 24px;">
+        <div style="font-size:2.2rem; margin-bottom:10px;">📺</div>
+        <div style="font-weight:700; font-size:1.1rem;">관객 점수판</div>
+        <div class="text-sm text-muted mt-1">읽기 전용 전광판 화면</div>
       </a>
-    </div>
-
-    <!-- Active Session Section -->
-    <div class="card mb-2">
-      <div class="flex-between mb-2">
-        <h3>세션</h3>
-        <button class="btn btn--primary btn--sm" onclick="showCreateSessionModal()">+ 새 세션</button>
-      </div>
-      <div class="card" style="background:#f8fbff; border:1px solid #d6e6ff; box-shadow:none; margin-bottom:12px;">
-        <div style="font-weight:700; margin-bottom:6px;">사용 순서</div>
-        <div class="text-sm" style="color:#335;">
-          1) 게임리스트 정리 → 2) 레퍼토리 구성 → 3) 세션 생성 → 4) <strong>세션 열기</strong> → 5) 진행 탭에서 현재 게임 시작
-        </div>
-      </div>
-      <div id="sessionList"></div>
-    </div>
-
-    <!-- Game List Summary -->
-    <div class="card mb-2">
-      <div class="flex-between mb-2">
-        <h3>게임리스트</h3>
-        <span class="text-sm text-muted" id="gameCount"></span>
-      </div>
-      <div id="gameListSummary"></div>
-    </div>
-
-    <!-- Repertoire Summary -->
-    <div class="card mb-2">
-      <div class="flex-between mb-2">
-        <h3>레퍼토리</h3>
-        <button class="btn btn--primary btn--sm" onclick="showCreateRepertoireModal()">+ 새 레퍼토리</button>
-      </div>
-      <div id="repertoireList"></div>
-    </div>
-  </div>
-
-  <!-- Create Session Modal -->
-  <div class="modal-overlay hidden" id="sessionModal">
-    <div class="modal">
-      <div class="modal-title">새 세션 생성</div>
-      <div class="form-group">
-        <label class="form-label">세션 제목</label>
-        <input class="form-input" id="sessionTitle" placeholder="예: 2026 여름 수련회">
-      </div>
-      <div class="form-group">
-        <label class="form-label">레퍼토리 선택</label>
-        <select class="form-select" id="sessionRepertoire"></select>
-      </div>
-      <div class="grid grid--2">
-        <div class="form-group">
-          <label class="form-label">좌측 팀 이름</label>
-          <input class="form-input" id="sessionLeftTeam" value="파란 팀">
-        </div>
-        <div class="form-group">
-          <label class="form-label">우측 팀 이름</label>
-          <input class="form-input" id="sessionRightTeam" value="빨간 팀">
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">날짜</label>
-        <input class="form-input" type="date" id="sessionDate">
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn--outline" onclick="closeModal('sessionModal')">취소</button>
-        <button class="btn btn--primary" onclick="createSession()">생성 후 바로 운영 시작</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Create Repertoire Modal -->
-  <div class="modal-overlay hidden" id="repertoireModal">
-    <div class="modal">
-      <div class="modal-title">새 레퍼토리 생성</div>
-      <div class="form-group">
-        <label class="form-label">레퍼토리 제목</label>
-        <input class="form-input" id="repertoireTitle" placeholder="예: 교회 여름 수련회">
-      </div>
-      <div class="form-group">
-        <label class="form-label">대상</label>
-        <select class="form-select" id="repertoireAudience">
-          <option value="general">일반</option>
-          <option value="church">교회</option>
-          <option value="school">학교</option>
-          <option value="company">기업</option>
-          <option value="family">가족</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">설명</label>
-        <textarea class="form-textarea" id="repertoireDescription" rows="2"></textarea>
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn--outline" onclick="closeModal('repertoireModal')">취소</button>
-        <button class="btn btn--primary" onclick="createRepertoire()">생성</button>
-      </div>
     </div>
   </div>
 
   <script src="assets/app.js"></script>
   <script>
-    // === Index Page Logic ===
-    function render() {
-      // Active session label
-      const active = App.Session.getActive();
-      document.getElementById('activeSessionLabel').textContent = active ? `활성: ${active.title}` : '활성 세션 없음';
-
-      // Session list
-      const sessions = App.Session.all().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-      const sessionHtml = sessions.length === 0
-        ? '<div class="empty-state">등록된 세션이 없습니다. 새 세션을 만들어 주세요.</div>'
-        : sessions.map(s => {
-            const scores = App.Session.getScores(s.id);
-            const isActive = active && active.id === s.id;
-            const repertoire = s.repertoireId ? App.Repertoire.byId(s.repertoireId) : null;
-            return `
-              <div class="game-item session-list-item" style="cursor:pointer;" onclick="selectSessionOnly('${s.id}')">
-                <div class="game-info">
-                  <div class="game-name">${isActive ? '🔵 ' : ''}${s.title}</div>
-                  <div class="game-meta">${s.date} ${repertoire ? '· ' + repertoire.title : ''} · ${s.leftTeamName} ${scores.leftTotal} : ${scores.rightTotal} ${s.rightTeamName}</div>
-                  <div class="text-sm text-muted mt-1">${isActive ? '현재 선택된 세션입니다.' : '탭하면 활성 세션으로만 선택됩니다.'}</div>
-                </div>
-                <div class="game-actions">
-                  <span class="badge ${s.status === 'active' ? 'badge--green' : s.status === 'completed' ? 'badge--gray' : 'badge--blue'}">${formatSessionStatus(s.status)}</span>
-                  <button class="btn btn--primary btn--sm" onclick="event.stopPropagation(); openSession('${s.id}')">세션 열기</button>
-                  <button class="btn btn--outline btn--sm" onclick="event.stopPropagation(); deleteSession('${s.id}')">삭제</button>
-                </div>
-              </div>
-            `;
-          }).join('');
-      document.getElementById('sessionList').innerHTML = sessionHtml;
-
-      // Game count
-      const games = App.Game.all();
-      document.getElementById('gameCount').textContent = `${games.length}개`;
-
-      // Game list summary (show first 5)
-      const summaryHtml = games.length === 0
-        ? '<div class="empty-state">등록된 게임이 없습니다. 운영 화면에서 추가해 주세요.</div>'
-        : games.slice(0, 5).map(g => `
-            <div class="game-item">
-              <div class="game-info">
-                <div class="game-name">${g.name}</div>
-                <div class="game-meta">${g.category} · ${g.estimatedMinutes}분 · ${g.scoringMode === 'per_question' ? `문제당 ${g.defaultPointsPerQuestion || g.defaultPoints}점` : `${g.defaultPoints}점`}</div>
-              </div>
-            </div>
-          `).join('') + (games.length > 5 ? `<div class="text-center text-sm text-muted mt-1">+${games.length - 5}개 더</div>` : '');
-      document.getElementById('gameListSummary').innerHTML = summaryHtml;
-
-      // Repertoire list
-      const repertoires = App.Repertoire.all();
-      const repHtml = repertoires.length === 0
-        ? '<div class="empty-state">등록된 레퍼토리가 없습니다.</div>'
-        : repertoires.map(r => {
-            const items = App.Repertoire.items(r.id);
-            const totalMin = App.Repertoire.totalEstimatedMinutes(r.id);
-            return `
-              <div class="game-item">
-                <div class="game-info">
-                  <div class="game-name">${r.title}</div>
-                  <div class="game-meta">${items.length}개 게임 · 총 ${totalMin}분 · ${r.audienceType}</div>
-                </div>
-              </div>
-            `;
-          }).join('');
-      document.getElementById('repertoireList').innerHTML = repHtml;
-
-      // Repertoire select in modal
-      const select = document.getElementById('sessionRepertoire');
-      select.innerHTML = '<option value="">레퍼토리 없음</option>' +
-        repertoires.map(r => `<option value="${r.id}">${r.title}</option>`).join('');
-
-      // Set today's date
-      if (!document.getElementById('sessionDate').value) {
-        document.getElementById('sessionDate').value = new Date().toISOString().slice(0, 10);
-      }
-    }
-
-    function showCreateSessionModal() {
-      render(); // refresh repertoire select
-      document.getElementById('sessionModal').classList.remove('hidden');
-    }
-
-    function showCreateRepertoireModal() {
-      document.getElementById('repertoireModal').classList.remove('hidden');
-    }
-
-    function formatSessionStatus(status) {
-      if (status === 'active') return '진행중';
-      if (status === 'completed') return '완료';
-      return '준비중';
-    }
-
-    function selectSessionOnly(id) {
-      App.Session.setActive(id);
-      render();
-    }
-
-    function openSession(id) {
-      App.Session.setActive(id);
-      location.href = 'control.html?tab=progress';
-    }
-
-    function closeModal(id) {
-      document.getElementById(id).classList.add('hidden');
-    }
-
-    function createSession() {
-      const title = document.getElementById('sessionTitle').value.trim();
-      if (!title) return alert('제목을 입력해 주세요.');
-      const session = App.Session.create({
-        title,
-        repertoireId: document.getElementById('sessionRepertoire').value,
-        leftTeamName: document.getElementById('sessionLeftTeam').value.trim() || '파란 팀',
-        rightTeamName: document.getElementById('sessionRightTeam').value.trim() || '빨간 팀',
-        date: document.getElementById('sessionDate').value,
-      });
-      App.Session.setActive(session.id);
-      closeModal('sessionModal');
-      document.getElementById('sessionTitle').value = '';
-      location.href = 'control.html?tab=progress';
-    }
-
-    function createRepertoire() {
-      const title = document.getElementById('repertoireTitle').value.trim();
-      if (!title) return alert('제목을 입력해 주세요.');
-      App.Repertoire.create({
-        title,
-        audienceType: document.getElementById('repertoireAudience').value,
-        description: document.getElementById('repertoireDescription').value.trim(),
-      });
-      closeModal('repertoireModal');
-      document.getElementById('repertoireTitle').value = '';
-      document.getElementById('repertoireDescription').value = '';
-      render();
-    }
-
-    function deleteSession(id) {
-      if (!confirm('세션을 삭제하시겠습니까? 기록도 함께 삭제됩니다.')) return;
-      const active = App.Session.getActive();
-      App.Session.delete(id);
-      if (active && active.id === id) App.Session.clearActive();
-      render();
-    }
-
-    // Close modals on overlay click
-    document.querySelectorAll('.modal-overlay').forEach(overlay => {
-      overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) overlay.classList.add('hidden');
-      });
-    });
-
-    // Init
-    render();
+    const active = App.Session.getActive();
+    document.getElementById('activeSessionLabel').textContent = active ? `활성 세션: ${active.title}` : '활성 세션 없음';
   </script>
 </body>
 </html>
