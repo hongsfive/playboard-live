@@ -131,6 +131,27 @@ const Repertoire = {
     });
   },
   removeItem(itemId) { RepertoireItem.delete(itemId); },
+  insertItemAfter(targetItemId, gameId, customData = {}) {
+    const target = RepertoireItem.byId(targetItemId);
+    if (!target) return null;
+    const items = RepertoireItem.byRepertoire(target.repertoireId);
+    const insertIndex = items.findIndex(i => i.id === targetItemId);
+    if (insertIndex === -1) return null;
+    const shifted = items.slice(insertIndex + 1);
+    shifted.forEach(item => {
+      RepertoireItem.update(item.id, { orderIndex: item.orderIndex + 1 });
+    });
+    const game = Game.byId(gameId);
+    return RepertoireItem.insert({
+      repertoireId: target.repertoireId,
+      gameId,
+      orderIndex: target.orderIndex + 1,
+      active: true,
+      customPoints: customData.customPoints ?? (game ? (game.scoringMode === 'per_question' ? (game.defaultPointsPerQuestion || game.defaultPoints) : game.defaultPoints) : 10),
+      customEstimatedMinutes: customData.customEstimatedMinutes ?? (game ? game.estimatedMinutes : 10),
+      customNote: customData.customNote || '',
+    });
+  },
   totalEstimatedMinutes(repertoireId) {
     const items = RepertoireItem.byRepertoire(repertoireId).filter(i => i.active);
     return items.reduce((sum, i) => sum + (i.customEstimatedMinutes || 10), 0);
@@ -187,6 +208,7 @@ const Session = {
       date: data.date || new Date().toISOString().slice(0, 10),
       leftTeamName: data.leftTeamName || 'Left Team',
       rightTeamName: data.rightTeamName || 'Right Team',
+      completedItemIds: [],
       status: 'planning', // planning | active | completed
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -204,6 +226,19 @@ const Session = {
     return id ? this.byId(id) : null;
   },
   clearActive() { localStorage.removeItem(STORAGE_KEYS.ACTIVE_SESSION); },
+  getCompletedItemIds(sessionId) {
+    const session = this.byId(sessionId);
+    return Array.isArray(session?.completedItemIds) ? session.completedItemIds : [];
+  },
+  markItemCompleted(sessionId, itemId) {
+    const completed = this.getCompletedItemIds(sessionId);
+    if (completed.includes(itemId)) return this.byId(sessionId);
+    return this.update(sessionId, { completedItemIds: [...completed, itemId], status: 'active' });
+  },
+  reopenItem(sessionId, itemId) {
+    const completed = this.getCompletedItemIds(sessionId);
+    return this.update(sessionId, { completedItemIds: completed.filter(id => id !== itemId), status: 'active' });
+  },
   getScores(sessionId) {
     const records = Record.bySession(sessionId);
     let leftTotal = 0, rightTotal = 0;

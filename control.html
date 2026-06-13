@@ -82,6 +82,10 @@
           </div>
           <div id="progressGuide" class="card" style="background:#f8fbff; border:1px solid #d6e6ff; box-shadow:none; margin-bottom:12px;"></div>
           <div id="progressGames"></div>
+          <div class="card text-center" style="margin-top:12px;">
+            <button class="btn btn--secondary btn--block" onclick="showAddGameToRepertoire()">+ 진행 중 게임 추가</button>
+            <div class="text-sm text-muted mt-1">여기서 추가하면 현재 세션 레퍼토리 맨 아래에도 함께 추가됩니다.</div>
+          </div>
         </div>
       </div>
 
@@ -97,6 +101,11 @@
           <div id="recordsList"></div>
         </div>
       </div>
+    </div>
+
+    <div id="progressBottomBar" class="progress-bottom-bar" style="display:none;">
+      <div class="progress-bottom-bar__main" id="progressBottomMain">세션을 선택해 주세요</div>
+      <div class="progress-bottom-bar__score" id="progressBottomScore"></div>
     </div>
   </div>
 
@@ -533,45 +542,77 @@
     }
 
     // === Progress Tab ===
+    function updateProgressBottomBar(session, items = [], scores = null, currentIndex = 0) {
+      const bar = document.getElementById('progressBottomBar');
+      const main = document.getElementById('progressBottomMain');
+      const scoreEl = document.getElementById('progressBottomScore');
+      if (!bar || !main || !scoreEl) return;
+      if (!session) {
+        bar.style.display = 'none';
+        return;
+      }
+      const safeScores = scores || App.Session.getScores(session.id);
+      const total = items.length;
+      const remaining = total > 0 ? Math.max(total - currentIndex, 0) : 0;
+      bar.style.display = 'flex';
+      main.textContent = total > 0
+        ? `${total}개 중 ${Math.min(currentIndex + 1, total)}번째 진행 · 남은 게임 ${remaining}개`
+        : '레퍼토리 게임 없음';
+      scoreEl.textContent = `${session.leftTeamName} ${safeScores.leftTotal} : ${safeScores.rightTotal} ${session.rightTeamName}`;
+    }
+
+    function getLatestEditableRecordForItem(sessionId, itemId) {
+      const records = App.Record.bySession(sessionId)
+        .filter(r => r.repertoireItemId === itemId)
+        .filter(r => ['left_win', 'right_win', 'draw_zero', 'draw_half', 'bonus_left', 'bonus_right', 'quiz_round'].includes(r.resultType));
+      return records.length > 0 ? records[records.length - 1] : null;
+    }
+
     function renderProgress() {
       const s = getActiveSession();
       if (!s) {
         document.getElementById('progressSummary').textContent = '';
         document.getElementById('progressGuide').innerHTML = '<div style="font-weight:700; margin-bottom:6px;">진행 시작 전 안내</div><div class="text-sm text-muted">홈에서 세션을 만든 뒤 다시 오시면, 현재 게임 카드에 점수 버튼이 나타납니다.</div>';
         document.getElementById('progressGames').innerHTML = '<div class="empty-state">진행 탭은 실제 행사 세션을 선택한 뒤 사용합니다.</div>';
+        updateProgressBottomBar(null);
         return;
       }
 
       if (!s.repertoireId) {
         document.getElementById('progressGuide').innerHTML = '<div style="font-weight:700; margin-bottom:6px;">진행 시작 전 안내</div><div class="text-sm text-muted">이 세션에는 레퍼토리가 연결되지 않았습니다. 홈에서 세션을 다시 만들거나 레퍼토리를 지정해 주세요.</div>';
         document.getElementById('progressGames').innerHTML = '<div class="empty-state">레퍼토리가 연결되지 않았습니다.</div>';
+        updateProgressBottomBar(s, [], App.Session.getScores(s.id), 0);
         return;
       }
 
       const items = App.Repertoire.items(s.repertoireId).filter(i => i.active);
       const records = App.Record.bySession(s.id);
       const scores = App.Session.getScores(s.id);
+      const completedIds = new Set(App.Session.getCompletedItemIds(s.id));
+      const currentIndex = items.findIndex(item => !completedIds.has(item.id));
+      const currentItem = currentIndex >= 0 ? items[currentIndex] : null;
+      const currentGame = currentItem ? App.Game.byId(currentItem.gameId) : null;
 
       document.getElementById('progressSummary').textContent =
-        `${items.length}개 게임 · ${scores.recordCount}개 진행 · ${s.leftTeamName} ${scores.leftTotal} : ${scores.rightTotal} ${s.rightTeamName}`;
-
-      const nextItem = items.find(item => !records.some(r => r.repertoireItemId === item.id));
-      const nextGame = nextItem ? App.Game.byId(nextItem.gameId) : null;
-      document.getElementById('progressGuide').innerHTML = nextItem
-        ? `<div style="font-weight:700; margin-bottom:6px;">게임 시작 방법</div><div class="text-sm" style="color:#335;">아래 <strong>진행 중</strong> 카드가 지금 조작할 게임입니다. <strong>${nextGame ? nextGame.name : '현재 게임'}</strong> 카드에서 승패 또는 퀴즈 점수 버튼을 누르면 바로 기록됩니다.</div>`
-        : `<div style="font-weight:700; margin-bottom:6px;">진행 완료</div><div class="text-sm text-muted">레퍼토리의 모든 게임 기록이 입력되었습니다. 필요하면 기록 탭에서 수정하거나 최근 취소를 사용할 수 있습니다.</div>`;
+        `${items.length}개 게임 · 기록 ${scores.recordCount}건 · ${s.leftTeamName} ${scores.leftTotal} : ${scores.rightTotal} ${s.rightTeamName}`;
 
       if (items.length === 0) {
         document.getElementById('progressGuide').innerHTML = '<div style="font-weight:700; margin-bottom:6px;">진행 시작 전 안내</div><div class="text-sm text-muted">먼저 레퍼토리에 게임을 추가해 주세요.</div>';
         document.getElementById('progressGames').innerHTML = '<div class="empty-state">레퍼토리에 게임이 없습니다.</div>';
+        updateProgressBottomBar(s, [], scores, 0);
         return;
       }
+
+      document.getElementById('progressGuide').innerHTML = currentItem
+        ? `<div style="font-weight:700; margin-bottom:6px;">게임 진행 방법</div><div class="text-sm" style="color:#335;">점수 버튼과 응원점수는 여러 번 눌러도 게임이 끝나지 않습니다. <strong>종료</strong> 또는 <strong>종료 및 한 번 더</strong>를 눌러야 다음 단계로 넘어갑니다. 현재 게임은 <strong>${currentGame ? currentGame.name : '알 수 없음'}</strong>입니다.</div>`
+        : `<div style="font-weight:700; margin-bottom:6px;">진행 완료</div><div class="text-sm text-muted">레퍼토리의 모든 게임이 종료되었습니다. 필요하면 완료 카드에서 결과 수정 또는 다시 진행을 사용할 수 있습니다.</div>`;
 
       const html = items.map((item, idx) => {
         const game = App.Game.byId(item.gameId);
         const gameRecords = records.filter(r => r.repertoireItemId === item.id);
-        const isCompleted = gameRecords.length > 0;
-        const isCurrent = !isCompleted && (idx === 0 || records.filter(r => r.repertoireItemId === items[idx - 1]?.id).length > 0 || items.slice(0, idx).every(it => records.filter(r => r.repertoireItemId === it.id).length > 0));
+        const latestEditable = getLatestEditableRecordForItem(s.id, item.id);
+        const isCompleted = completedIds.has(item.id);
+        const isCurrent = !!currentItem && currentItem.id === item.id;
         const statusClass = isCompleted ? 'completed' : isCurrent ? 'current' : 'upcoming';
         const isQuizMode = game && game.scoringMode === 'per_question';
 
@@ -589,9 +630,9 @@
               <div class="text-sm text-muted mt-1">
                 ${gameRecords.map(r => `${formatRecordSummary(r, s)} (${r.leftPoints}:${r.rightPoints})`).join(' / ')}
               </div>
-            ` : ''}
+            ` : '<div class="text-sm text-muted mt-1">아직 저장된 점수가 없습니다.</div>'}
             ${isCurrent ? `
-              <div class="mt-1" style="font-weight:700; color:#0f3460;">이 카드가 현재 게임입니다. 아래 버튼으로 바로 시작/기록하세요.</div>
+              <div class="mt-1" style="font-weight:700; color:#0f3460;">이 게임은 직접 종료하기 전까지 계속 진행됩니다.</div>
               ${isQuizMode ? `
                 <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; margin-top:12px;">
                   <div class="form-group">
@@ -607,16 +648,16 @@
                     <input class="form-input" type="number" id="quiz-right-correct-${item.id}" value="0" min="0">
                   </div>
                 </div>
-                <div class="text-sm text-muted mt-1">문제당 ${item.customPoints}점 기준으로 각 팀 정답 수만큼 누적됩니다.</div>
+                <div class="text-sm text-muted mt-1">문제당 ${item.customPoints}점 기준으로 누적 저장됩니다.</div>
                 <div class="result-buttons">
                   <button class="btn btn--primary" onclick="recordQuizResult('${item.id}', ${item.customPoints})">퀴즈 점수 저장</button>
                 </div>
               ` : `
                 <div class="result-buttons">
-                  <button class="btn btn--success" onclick="recordResult('${item.id}', ${item.customPoints}, 'left_win')">${s.leftTeamName} 승</button>
-                  <button class="btn btn--danger" onclick="recordResult('${item.id}', ${item.customPoints}, 'right_win')">${s.rightTeamName} 승</button>
-                  <button class="btn btn--outline" onclick="recordResult('${item.id}', ${item.customPoints}, 'draw_zero')">동점 0</button>
-                  <button class="btn btn--outline" onclick="recordResult('${item.id}', ${item.customPoints}, 'draw_half')">동점 ½</button>
+                  <button class="btn btn--success" onclick="recordResult('${item.id}', ${item.customPoints}, 'left_win')">${s.leftTeamName} 점수 저장</button>
+                  <button class="btn btn--danger" onclick="recordResult('${item.id}', ${item.customPoints}, 'right_win')">${s.rightTeamName} 점수 저장</button>
+                  <button class="btn btn--outline" onclick="recordResult('${item.id}', ${item.customPoints}, 'draw_zero')">동점 0 저장</button>
+                  <button class="btn btn--outline" onclick="recordResult('${item.id}', ${item.customPoints}, 'draw_half')">동점 ½ 저장</button>
                 </div>
               `}
               <div class="bonus-buttons">
@@ -627,11 +668,21 @@
                 <button class="btn btn--danger btn--sm" onclick="recordBonus('${item.id}', 20, 'right')">우 +20</button>
                 <button class="btn btn--danger btn--sm" onclick="recordBonus('${item.id}', 30, 'right')">우 +30</button>
               </div>
+              <div class="result-buttons" style="margin-top:14px;">
+                <button class="btn btn--secondary" onclick="completeCurrentGame('${item.id}')">종료</button>
+                <button class="btn btn--primary" onclick="completeAndRepeatGame('${item.id}')">종료 및 한 번 더</button>
+              </div>
+            ` : isCompleted ? `
+              <div class="result-buttons" style="margin-top:12px;">
+                ${latestEditable ? `<button class="btn btn--outline" onclick="editRecord('${latestEditable.id}')">결과 수정</button>` : ''}
+                <button class="btn btn--outline" onclick="reopenCompletedGame('${item.id}')">다시 진행</button>
+              </div>
             ` : ''}
           </div>
         `;
       }).join('');
       document.getElementById('progressGames').innerHTML = html;
+      updateProgressBottomBar(s, items, scores, currentIndex >= 0 ? currentIndex : items.length);
     }
 
     function recordResult(itemIdx, points, resultType) {
@@ -694,6 +745,40 @@
         leftPoints,
         rightPoints,
       });
+      renderHeader();
+      renderProgress();
+      renderRecords();
+    }
+
+    function completeCurrentGame(itemId) {
+      const s = getActiveSession();
+      if (!s) return;
+      App.Session.markItemCompleted(s.id, itemId);
+      renderHeader();
+      renderProgress();
+      renderRecords();
+    }
+
+    function completeAndRepeatGame(itemId) {
+      const s = getActiveSession();
+      if (!s) return;
+      const item = App.RepertoireItem.byId(itemId);
+      if (!item) return;
+      App.Repertoire.insertItemAfter(itemId, item.gameId, {
+        customPoints: item.customPoints,
+        customEstimatedMinutes: item.customEstimatedMinutes,
+        customNote: item.customNote,
+      });
+      App.Session.markItemCompleted(s.id, itemId);
+      renderHeader();
+      renderProgress();
+      renderRecords();
+    }
+
+    function reopenCompletedGame(itemId) {
+      const s = getActiveSession();
+      if (!s) return;
+      App.Session.reopenItem(s.id, itemId);
       renderHeader();
       renderProgress();
       renderRecords();

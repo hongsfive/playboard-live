@@ -84,10 +84,7 @@
       if (s.repertoireId) {
         const items = App.Repertoire.items(s.repertoireId).filter(i => i.active);
         const records = App.Record.bySession(s.id);
-        const completedItems = new Set();
-        records.forEach(r => {
-          if (r.repertoireItemId) completedItems.add(r.repertoireItemId);
-        });
+        const completedItems = new Set(App.Session.getCompletedItemIds(s.id));
 
         // Find current game
         let currentGameName = '';
@@ -106,7 +103,7 @@
 
         document.getElementById('currentGame').textContent = currentGameName ? `현재: ${currentGameName}` : '모든 게임 완료!';
         document.getElementById('progressFill').style.width = pct + '%';
-        document.getElementById('progressText').textContent = `${completedCount} / ${total} (${pct}%)`;
+        document.getElementById('progressText').textContent = `${completedCount} / ${total} 완료`;
 
         // Recent record
         if (records.length > 0) {
