@@ -6,3 +6,6 @@
 
 # Local git noise
 .DS_Store
+
+# Local Netlify folder
+.netlify
