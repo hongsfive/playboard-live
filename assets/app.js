@@ -379,10 +379,12 @@ function seedSampleData() {
 }
 
 /* === Timer === */
+let _serverTimeOffset = 0; // Firebase 서버 시간과 로컬 시간의 차이(ms)
+
 const Timer = {
   KEY: 'rec_timer',
   start(durationMs) {
-    save(this.KEY, { status: 'running', endAt: Date.now() + durationMs });
+    save(this.KEY, { status: 'running', endAt: Date.now() + _serverTimeOffset + durationMs });
   },
   stop() {
     save(this.KEY, { status: 'idle', endAt: null });
@@ -396,7 +398,7 @@ const Timer = {
   getRemainingMs() {
     const st = this.getState();
     if (st.status !== 'running' || !st.endAt) return 0;
-    return Math.max(0, st.endAt - Date.now());
+    return Math.max(0, st.endAt - (Date.now() + _serverTimeOffset));
   },
 };
 
@@ -416,6 +418,11 @@ const Firebase = {
     this._initialized = false;
     const fbApp = firebase.initializeApp(config);
     this._db = firebase.database(fbApp);
+
+    // 기기 간 시계 오차 보정
+    this._db.ref('.info/serverTimeOffset').on('value', snap => {
+      _serverTimeOffset = snap.val() || 0;
+    });
 
     this._db.ref('sb').on('value', snap => {
       const data = snap.val();
