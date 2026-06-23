@@ -77,6 +77,7 @@ const Game = {
       scoringMode: inferScoringMode(data),
       defaultPoints: Number(data.defaultPoints) || 10,
       defaultPointsPerQuestion: Number(data.defaultPointsPerQuestion) || Number(data.defaultPoints) || 10,
+      defaultPointsPerPerson: Number(data.defaultPointsPerPerson) || Number(data.defaultPointsPerQuestion) || Number(data.defaultPoints) || 10,
       difficulty: data.difficulty || 'medium',
       energyLevel: data.energyLevel || 'medium',
       tags: data.tags || [],
@@ -121,7 +122,7 @@ const Repertoire = {
       gameId,
       orderIndex: maxOrder + 1,
       active: true,
-      customPoints: customData.customPoints ?? (game ? (game.scoringMode === 'per_question' ? (game.defaultPointsPerQuestion || game.defaultPoints) : game.defaultPoints) : 10),
+      customPoints: customData.customPoints ?? (game ? (game.scoringMode === 'per_question' ? (game.defaultPointsPerQuestion || game.defaultPoints) : game.scoringMode === 'per_person' ? (game.defaultPointsPerPerson || game.defaultPoints) : game.defaultPoints) : 10),
       customEstimatedMinutes: customData.customEstimatedMinutes ?? (game ? game.estimatedMinutes : 10),
       customNote: customData.customNote || '',
     });
@@ -148,7 +149,7 @@ const Repertoire = {
       gameId,
       orderIndex: target.orderIndex + 1,
       active: true,
-      customPoints: customData.customPoints ?? (game ? (game.scoringMode === 'per_question' ? (game.defaultPointsPerQuestion || game.defaultPoints) : game.defaultPoints) : 10),
+      customPoints: customData.customPoints ?? (game ? (game.scoringMode === 'per_question' ? (game.defaultPointsPerQuestion || game.defaultPoints) : game.scoringMode === 'per_person' ? (game.defaultPointsPerPerson || game.defaultPoints) : game.defaultPoints) : 10),
       customEstimatedMinutes: customData.customEstimatedMinutes ?? (game ? game.estimatedMinutes : 10),
       customNote: customData.customNote || '',
     });
@@ -347,6 +348,14 @@ function calculateQuizPoints(pointsPerQuestion, correctCountLeft, correctCountRi
   };
 }
 
+function calculatePersonPoints(pointsPerPerson, countLeft, countRight) {
+  const unit = Number(pointsPerPerson) || 0;
+  return {
+    leftPoints: (Number(countLeft) || 0) * unit,
+    rightPoints: (Number(countRight) || 0) * unit,
+  };
+}
+
 /* === Seed Sample Data === */
 function seedSampleData() {
   if (Game.all().length > 0) return; // already has data
@@ -487,7 +496,7 @@ const Firebase = {
 /* === Export for browser === */
 window.App = {
   Game, Repertoire, RepertoireItem, Session, Record, Timer, Firebase,
-  calculatePoints, calculateQuizPoints, inferScoringMode, seedSampleData, STORAGE_KEYS,
+  calculatePoints, calculateQuizPoints, calculatePersonPoints, inferScoringMode, seedSampleData, STORAGE_KEYS,
   load, save, genId,
 };
 

@@ -154,10 +154,11 @@
           <select class="form-select" id="gameScoringMode">
             <option value="fixed_per_game">게임 1회당 고정 배점</option>
             <option value="per_question">정답 수 직접 기록</option>
+            <option value="per_person">대표선수 인원 × 배점</option>
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">문제당 점수</label>
+          <label class="form-label">단위당 점수</label>
           <input class="form-input" type="number" id="gameDefaultPointsPerQuestion" value="5">
         </div>
       </div>
@@ -515,6 +516,7 @@
         defaultPoints: Number(document.getElementById('gameDefaultPoints').value) || 10,
         scoringMode: document.getElementById('gameScoringMode').value,
         defaultPointsPerQuestion: Number(document.getElementById('gameDefaultPointsPerQuestion').value) || Number(document.getElementById('gameDefaultPoints').value) || 5,
+        defaultPointsPerPerson: Number(document.getElementById('gameDefaultPointsPerQuestion').value) || Number(document.getElementById('gameDefaultPoints').value) || 10,
         estimatedMinutes: Number(document.getElementById('gameEstimatedMinutes').value) || 10,
         minPlayers: Number(document.getElementById('gameMinPlayers').value) || 2,
         materialsText: document.getElementById('gameMaterials').value.trim(),
@@ -858,12 +860,13 @@
     function getLatestEditableRecordForItem(sessionId, itemId) {
       const records = App.Record.bySession(sessionId)
         .filter(r => r.repertoireItemId === itemId)
-        .filter(r => ['left_win', 'right_win', 'draw_zero', 'draw_half', 'bonus_left', 'bonus_right', 'quiz_round'].includes(r.resultType));
+        .filter(r => ['left_win', 'right_win', 'draw_zero', 'draw_half', 'bonus_left', 'bonus_right', 'quiz_round', 'person_round'].includes(r.resultType));
       return records.length > 0 ? records[records.length - 1] : null;
     }
 
     function renderCurrentGameControls(session, item, game) {
       const isQuizMode = game && game.scoringMode === 'per_question';
+      const isPersonMode = game && game.scoringMode === 'per_person';
       if (!item || !game) return '';
       const pts = item.customPoints;
       const lName = session.leftTeamName;
@@ -892,6 +895,27 @@
               </div>
             </div>
             <button class="btn btn--primary btn--block" style="margin-bottom:12px;" onclick="recordQuizResult('${item.id}', ${pts})">퀴즈 점수 저장 (문제당 ${pts}점)</button>
+          ` : isPersonMode ? `
+            <div class="cg-quiz-row">
+              <div class="cg-quiz-team">
+                <div class="cg-team-label left">${lName}</div>
+                <div class="cg-stepper">
+                  <button class="btn btn--outline btn--sm" onclick="stepPersonCount('${item.id}', 'left', -1)">−</button>
+                  <input class="form-input cg-quiz-input" type="number" id="person-left-count-${item.id}" value="0" min="0">
+                  <button class="btn btn--success btn--sm" onclick="stepPersonCount('${item.id}', 'left', 1)">+</button>
+                </div>
+              </div>
+              <div class="cg-quiz-vs">×${pts}점</div>
+              <div class="cg-quiz-team">
+                <div class="cg-team-label right">${rName}</div>
+                <div class="cg-stepper">
+                  <button class="btn btn--outline btn--sm" onclick="stepPersonCount('${item.id}', 'right', -1)">−</button>
+                  <input class="form-input cg-quiz-input" type="number" id="person-right-count-${item.id}" value="0" min="0">
+                  <button class="btn btn--danger btn--sm" onclick="stepPersonCount('${item.id}', 'right', 1)">+</button>
+                </div>
+              </div>
+            </div>
+            <button class="btn btn--primary btn--block" style="margin-bottom:12px;" onclick="recordPersonResult('${item.id}', ${pts})">대표선수 점수 저장 (인원당 ${pts}점)</button>
           ` : `
             <div class="cg-win-row">
               <button class="btn btn--success cg-win-btn" onclick="recordResult('${item.id}', ${pts}, 'left_win')">${lName} 승<span class="cg-pts">+${pts}점</span></button>
@@ -1039,6 +1063,35 @@
       const roundNum = App.Record.bySession(s.id).length + 1;
       App.Record.create({ sessionId: s.id, repertoireItemId: itemId, roundNumber: roundNum, resultType, pointsUsed: points, leftPoints: side === 'left' ? points : 0, rightPoints: side === 'right' ? points : 0 });
       showToast(`${side === 'left' ? s.leftTeamName : s.rightTeamName} 보너스 +${points}점`);
+      renderHeader();
+      renderProgress();
+      renderRecords();
+    }
+
+    function stepPersonCount(itemId, side, delta) {
+      const input = document.getElementById(`person-${side}-count-${itemId}`);
+      if (input) input.value = Math.max(0, (Number(input.value) || 0) + delta);
+    }
+
+    function recordPersonResult(itemId, pointsPerPerson) {
+      const s = getActiveSession();
+      if (!s) return;
+      const countLeft = Number(document.getElementById(`person-left-count-${itemId}`).value) || 0;
+      const countRight = Number(document.getElementById(`person-right-count-${itemId}`).value) || 0;
+      const { leftPoints, rightPoints } = App.calculatePersonPoints(pointsPerPerson, countLeft, countRight);
+      const roundNum = App.Record.bySession(s.id).length + 1;
+      App.Record.create({
+        sessionId: s.id,
+        repertoireItemId: itemId,
+        roundNumber: roundNum,
+        resultType: 'person_round',
+        pointsUsed: pointsPerPerson,
+        correctCountLeft: countLeft,
+        correctCountRight: countRight,
+        leftPoints,
+        rightPoints,
+      });
+      showToast(`대표선수 저장 · ${s.leftTeamName} ${countLeft}명 / ${s.rightTeamName} ${countRight}명`);
       renderHeader();
       renderProgress();
       renderRecords();
@@ -1242,6 +1295,7 @@
 
     function formatRecordSummary(record, session) {
       if (record.resultType === 'quiz_round') return `퀴즈 · ${session.leftTeamName} ${record.correctCountLeft || 0} / ${session.rightTeamName} ${record.correctCountRight || 0}`;
+      if (record.resultType === 'person_round') return `대표선수 · ${session.leftTeamName} ${record.correctCountLeft || 0}명 / ${session.rightTeamName} ${record.correctCountRight || 0}명`;
       if (record.resultType === 'left_win') return `${session.leftTeamName} 승`;
       if (record.resultType === 'right_win') return `${session.rightTeamName} 승`;
       if (record.resultType === 'draw_zero') return '동점 (0점)';

@@ -119,6 +119,8 @@
           const game = item ? App.Game.byId(item.gameId) : null;
           const label = latest.resultType === 'quiz_round'
                         ? `퀴즈 · ${s.leftTeamName} ${latest.correctCountLeft || 0} / ${s.rightTeamName} ${latest.correctCountRight || 0}`
+                        : latest.resultType === 'person_round'
+                        ? `대표선수 · ${s.leftTeamName} ${latest.correctCountLeft || 0}명 / ${s.rightTeamName} ${latest.correctCountRight || 0}명`
                         : latest.resultType === 'left_win' ? `${s.leftTeamName} 승` :
                         latest.resultType === 'right_win' ? `${s.rightTeamName} 승` :
                         latest.resultType === 'draw_zero' ? '동점 (0점)' :
