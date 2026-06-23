@@ -426,7 +426,14 @@ window._fbSchedulePush = function() {
 
 const Firebase = {
   _db: null,
+  _auth: null,
   _initialized: false,
+  _uid: null,
+
+  _getRef() {
+    if (!this._db || !this._uid) return null;
+    return this._db.ref(`users/${this._uid}/sb`);
+  },
 
   init(config) {
     this._initialized = false;
@@ -438,9 +445,22 @@ const Firebase = {
       _serverTimeOffset = snap.val() || 0;
     });
 
-    this._db.ref('sb').on('value', snap => {
-      const data = snap.val();
+    // Auth는 firebase-auth-compat.js가 로드된 경우에만
+    if (typeof firebase.auth === 'function') {
+      this._auth = firebase.auth(fbApp);
+      this._auth.onAuthStateChanged(user => {
+        this._uid = user ? user.uid : null;
+        if (typeof window._onAuthStateChange === 'function') window._onAuthStateChange(user);
+      });
+    }
+  },
 
+  startListening() {
+    const ref = this._getRef();
+    if (!ref) return;
+    this._initialized = false;
+    ref.on('value', snap => {
+      const data = snap.val();
       if (!this._initialized) {
         this._initialized = true;
         if (data) {
@@ -449,15 +469,11 @@ const Firebase = {
           });
           if (typeof window._onFirebaseSync === 'function') window._onFirebaseSync();
         } else {
-          // Firebase 비어 있음 — 로컬 데이터 업로드
           setTimeout(() => this.push(), 100);
         }
         return;
       }
-
-      // 자신의 push 에코는 무시 (로컬이 더 최신)
       if (_fbPushPending) return;
-
       if (!data) return;
       let changed = false;
       Object.entries(data).forEach(([k, v]) => {
@@ -467,27 +483,51 @@ const Firebase = {
           changed = true;
         }
       });
-      if (changed && typeof window._onFirebaseSync === 'function') {
-        window._onFirebaseSync();
-      }
+      if (changed && typeof window._onFirebaseSync === 'function') window._onFirebaseSync();
     });
   },
 
+  // display.html 전용: 인증 없이 특정 uid 데이터 구독 (읽기 전용)
+  watchUid(uid) {
+    if (!this._db) return;
+    Object.values(STORAGE_KEYS).forEach(k => localStorage.removeItem(k));
+    localStorage.removeItem(Timer.KEY);
+    this._db.ref(`users/${uid}/sb`).on('value', snap => {
+      const data = snap.val();
+      if (!data) return;
+      Object.entries(data).forEach(([k, v]) => {
+        localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
+      });
+      if (typeof window._onFirebaseSync === 'function') window._onFirebaseSync();
+    });
+  },
+
+  signInWithGoogle() {
+    if (!this._auth) return Promise.reject(new Error('Auth not initialized'));
+    return this._auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+  },
+
+  signOut() {
+    if (!this._auth) return Promise.reject(new Error('Auth not initialized'));
+    return this._auth.signOut();
+  },
+
   push() {
-    if (!this._db || !this._initialized) return;
+    const ref = this._getRef();
+    if (!ref || !this._initialized) return;
     const data = {};
     Object.values(STORAGE_KEYS).forEach(key => {
       const raw = localStorage.getItem(key);
       if (raw === null) return;
       if (key === STORAGE_KEYS.ACTIVE_SESSION) {
-        data[key] = raw; // raw string (세션 ID)
+        data[key] = raw;
       } else {
         try { data[key] = JSON.parse(raw); } catch {}
       }
     });
     const timerRaw = localStorage.getItem(Timer.KEY);
     if (timerRaw) { try { data[Timer.KEY] = JSON.parse(timerRaw); } catch {} }
-    this._db.ref('sb').set(data)
+    ref.set(data)
       .then(() => setTimeout(() => { _fbPushPending = false; }, 800))
       .catch(e => { _fbPushPending = false; console.warn('[Firebase]', e); });
   },

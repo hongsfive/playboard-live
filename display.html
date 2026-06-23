@@ -189,6 +189,16 @@
       messagingSenderId: "1056586454779",
       appId: "1:1056586454779:web:42d432d6593d518b82c25e"
     });
+    const _displayUid = new URLSearchParams(location.search).get('uid')
+      || localStorage.getItem('_pbauth_uid');
+    if (_displayUid) {
+      App.Firebase.watchUid(_displayUid);
+    } else {
+      const _ns = document.getElementById('noSession');
+      _ns.innerHTML = '<div style="font-size:3rem;margin-bottom:16px;">🔗</div><div style="font-size:1.5rem;opacity:0.5;">연결된 운영 화면이 없습니다</div><div class="text-sm text-muted mt-2">운영 화면에서 관객 화면 버튼을 눌러 주세요.</div>';
+      _ns.style.display = 'block';
+      document.getElementById('displayContent').style.display = 'none';
+    }
   </script>
 </body>
 </html>

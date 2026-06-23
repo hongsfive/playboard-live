@@ -209,7 +209,7 @@ input, textarea, select { font: inherit; }
 }
 
 /* === Tab Content === */
-.tab-content { display: none; padding: 16px; }
+.tab-content { display: none; padding: 16px 16px calc(72px + env(safe-area-inset-bottom)); }
 .tab-content.active { display: block; }
 
 /* === Game List === */

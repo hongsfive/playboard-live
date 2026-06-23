@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="assets/style.css">
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 </head>
 <body>
   <div id="app">
@@ -18,6 +19,11 @@
       <div style="text-align:right;">
         <div class="session-info" id="headerSession">세션 미선택</div>
         <div class="session-info" id="headerScore">세션 관리 탭에서 세션을 준비해 주세요</div>
+        <div style="margin-top:6px; display:flex; align-items:center; justify-content:flex-end; gap:6px; flex-wrap:wrap;">
+          <span id="headerUserEmail" style="font-size:0.72rem; opacity:0.6;"></span>
+          <button id="openDisplayBtn" class="btn btn--outline btn--sm" style="font-size:0.72rem; padding:2px 8px; display:none;" onclick="openDisplayScreen()">관객 화면</button>
+          <button id="signOutBtn" class="btn btn--outline btn--sm" style="font-size:0.72rem; padding:2px 8px; display:none;" onclick="App.Firebase.signOut()">로그아웃</button>
+        </div>
       </div>
     </div>
 
@@ -333,6 +339,17 @@
         <button class="btn btn--outline" onclick="closeModal('confirmModal')">취소</button>
         <button class="btn btn--danger" id="confirmModalOk">확인</button>
       </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="authOverlay" style="z-index:200; background:rgba(15,23,42,0.96);">
+    <div class="modal" style="max-width:320px; text-align:center;">
+      <div style="font-size:2.5rem; margin-bottom:12px;">🎯</div>
+      <div class="modal-title">Playboard Live</div>
+      <p class="text-sm" style="color:#6b7280; margin-bottom:20px; line-height:1.6;">운영하려면 Google 계정으로 로그인해 주세요.</p>
+      <button class="btn btn--primary btn--block" onclick="App.Firebase.signInWithGoogle().catch(e => showToast(e.message, 'error'))">
+        Google로 로그인
+      </button>
     </div>
   </div>
 
@@ -1492,8 +1509,39 @@
       _updateTimerBar();
     }
 
-    renderHeader();
-    activateTab(new URLSearchParams(location.search).get('tab') || 'games');
+    function openDisplayScreen() {
+      const uid = App.Firebase._uid;
+      if (!uid) { showToast('로그인 후 이용하세요.', 'error'); return; }
+      window.open(`display.html?uid=${uid}`, '_blank');
+    }
+
+    window._onAuthStateChange = function(user) {
+      const overlay = document.getElementById('authOverlay');
+      if (user) {
+        const prevUid = localStorage.getItem('_pbauth_uid');
+        if (prevUid && prevUid !== user.uid) {
+          Object.values(App.STORAGE_KEYS).forEach(k => localStorage.removeItem(k));
+          localStorage.removeItem(App.Timer.KEY);
+        }
+        localStorage.setItem('_pbauth_uid', user.uid);
+        overlay.classList.add('hidden');
+        document.getElementById('headerUserEmail').textContent = user.email || user.displayName || '';
+        document.getElementById('signOutBtn').style.display = '';
+        document.getElementById('openDisplayBtn').style.display = '';
+        window._onFirebaseSync = function() {
+          renderHeader(); renderGames(); renderRepertoire();
+          renderSessions(); renderProgress(); renderRecords();
+        };
+        App.Firebase.startListening();
+        renderHeader();
+        activateTab(new URLSearchParams(location.search).get('tab') || 'games');
+      } else {
+        overlay.classList.remove('hidden');
+        document.getElementById('headerUserEmail').textContent = '';
+        document.getElementById('signOutBtn').style.display = 'none';
+        document.getElementById('openDisplayBtn').style.display = 'none';
+      }
+    };
   </script>
   <script>
     App.Firebase.init({
