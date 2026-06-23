@@ -45,6 +45,7 @@
             <h3>게임리스트</h3>
             <button class="btn btn--primary btn--sm" onclick="showGameForm()">+ 새 게임</button>
           </div>
+          <input class="form-input" id="gameSearchInput" placeholder="이름 또는 카테고리 검색..." oninput="renderGames()" style="margin-bottom:12px;">
           <div id="gamesList"></div>
         </div>
       </div>
@@ -104,7 +105,8 @@
         <div class="container">
           <div class="flex-between mb-2">
             <h3>기록</h3>
-            <div>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn--outline btn--sm" onclick="showSessionSummary()">결과 요약</button>
               <button class="btn btn--danger btn--sm" onclick="undoLastRecord()">최근 취소</button>
             </div>
           </div>
@@ -126,6 +128,8 @@
       <button class="timer-preset-btn" onclick="startTimer(60)">1분</button>
       <button class="timer-preset-btn" onclick="startTimer(120)">2분</button>
       <button class="timer-preset-btn" onclick="startTimer(180)">3분</button>
+      <input class="timer-custom-input" type="number" id="timerCustomInput" placeholder="초" min="1" max="3600" onkeydown="if(event.key==='Enter')startCustomTimer()">
+      <button class="timer-preset-btn" onclick="startCustomTimer()" style="flex:0; padding:6px 8px;">▶</button>
     </div>
     <button class="timer-stop-btn hidden" id="timerStopBtn" onclick="stopTimer()">■ 정지</button>
   </div>
@@ -332,6 +336,17 @@
     </div>
   </div>
 
+  <div class="modal-overlay hidden" id="summaryModal">
+    <div class="modal" style="max-width:400px;">
+      <div class="modal-title">세션 결과 요약</div>
+      <div id="summaryContent" style="max-height:60vh; overflow-y:auto; margin-bottom:16px;"></div>
+      <div class="modal-actions">
+        <button class="btn btn--outline" onclick="closeModal('summaryModal')">닫기</button>
+        <button class="btn btn--primary" onclick="copySessionSummary()">텍스트 복사</button>
+      </div>
+    </div>
+  </div>
+
   <script src="assets/app.js"></script>
   <script>
     let activeSession = null;
@@ -453,14 +468,22 @@
     }
 
     function renderGames() {
-      const games = App.Game.all();
+      const query = (document.getElementById('gameSearchInput')?.value || '').toLowerCase().trim();
+      const all = App.Game.all();
+      const games = query ? all.filter(g =>
+        g.name.toLowerCase().includes(query) || (g.category || '').toLowerCase().includes(query)
+      ) : all;
+      const modeLabel = g =>
+        g.scoringMode === 'per_question' ? `문제당 ${g.defaultPointsPerQuestion || g.defaultPoints}점`
+        : g.scoringMode === 'per_person' ? `인원당 ${g.defaultPointsPerPerson || g.defaultPoints}점`
+        : `${g.defaultPoints}점`;
       const html = games.length === 0
-        ? '<div class="empty-state">등록된 게임이 없습니다.</div>'
+        ? `<div class="empty-state">${query ? '검색 결과가 없습니다.' : '등록된 게임이 없습니다.'}</div>`
         : games.map(g => `
           <div class="game-item">
             <div class="game-info">
               <div class="game-name">${g.name}</div>
-              <div class="game-meta">${g.category || '미분류'} · ${g.estimatedMinutes}분 · ${g.scoringMode === 'per_question' ? `문제당 ${g.defaultPointsPerQuestion || g.defaultPoints}점` : `${g.defaultPoints}점`} · 난이도:${g.difficulty}</div>
+              <div class="game-meta">${g.category || '미분류'} · ${g.estimatedMinutes}분 · ${modeLabel(g)} · 난이도:${g.difficulty}</div>
             </div>
             <div class="game-actions">
               <button class="btn btn--outline btn--sm" onclick="editGame('${g.id}')">수정</button>
@@ -933,12 +956,16 @@
               <button class="btn btn--success btn--sm" onclick="recordBonus('${item.id}', 10, 'left')">+10</button>
               <button class="btn btn--success btn--sm" onclick="recordBonus('${item.id}', 20, 'left')">+20</button>
               <button class="btn btn--success btn--sm" onclick="recordBonus('${item.id}', 30, 'left')">+30</button>
+              <input class="form-input cg-bonus-custom" type="number" id="bonus-custom-left-${item.id}" placeholder="직접" min="1">
+              <button class="btn btn--success btn--sm" onclick="recordCustomBonus('${item.id}', 'left')">적용</button>
             </div>
             <div class="cg-bonus-row">
               <span class="cg-bonus-label right">${rName}</span>
               <button class="btn btn--danger btn--sm" onclick="recordBonus('${item.id}', 10, 'right')">+10</button>
               <button class="btn btn--danger btn--sm" onclick="recordBonus('${item.id}', 20, 'right')">+20</button>
               <button class="btn btn--danger btn--sm" onclick="recordBonus('${item.id}', 30, 'right')">+30</button>
+              <input class="form-input cg-bonus-custom" type="number" id="bonus-custom-right-${item.id}" placeholder="직접" min="1">
+              <button class="btn btn--danger btn--sm" onclick="recordCustomBonus('${item.id}', 'right')">적용</button>
             </div>
           </div>
           <div class="cg-end-row">
@@ -1066,6 +1093,93 @@
       renderHeader();
       renderProgress();
       renderRecords();
+    }
+
+    function recordCustomBonus(itemId, side) {
+      const input = document.getElementById(`bonus-custom-${side}-${itemId}`);
+      const pts = Number(input?.value) || 0;
+      if (pts <= 0) { showToast('보너스 점수를 입력해 주세요.', 'error'); return; }
+      recordBonus(itemId, pts, side);
+      if (input) input.value = '';
+    }
+
+    function showSessionSummary() {
+      const s = getActiveSession();
+      if (!s) { showToast('활성 세션이 없습니다.', 'error'); return; }
+      const scores = App.Session.getScores(s.id);
+      const records = App.Record.bySession(s.id);
+      const groups = [];
+      const keyIndex = {};
+      records.forEach(r => {
+        const key = r.repertoireItemId || '__none__';
+        if (keyIndex[key] === undefined) { keyIndex[key] = groups.length; groups.push({ key, records: [] }); }
+        groups[keyIndex[key]].records.push(r);
+      });
+      const winner = scores.leftTotal > scores.rightTotal ? `🏆 ${s.leftTeamName} 우승`
+        : scores.rightTotal > scores.leftTotal ? `🏆 ${s.rightTeamName} 우승`
+        : '🤝 무승부';
+      const gameRows = groups.map((group, i) => {
+        const item = group.key !== '__none__' ? App.RepertoireItem.byId(group.key) : null;
+        const game = item ? App.Game.byId(item.gameId) : null;
+        const leftSub = group.records.reduce((sum, r) => sum + (r.leftPoints || 0), 0);
+        const rightSub = group.records.reduce((sum, r) => sum + (r.rightPoints || 0), 0);
+        return `<div style="padding:8px 0; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:0.9rem;">${i + 1}. ${game ? game.name : '기타'}</span>
+          <span style="font-size:0.9rem; color:#555;">${leftSub} : ${rightSub}</span>
+        </div>`;
+      }).join('');
+      document.getElementById('summaryContent').innerHTML = `
+        <div style="text-align:center; margin-bottom:16px;">
+          <div style="font-size:1.1rem; font-weight:700; color:#6366f1;">${s.title}</div>
+        </div>
+        <div style="display:flex; justify-content:center; align-items:center; gap:24px; padding:16px; background:#f8f9ff; border-radius:12px; margin-bottom:14px;">
+          <div style="text-align:center;">
+            <div style="font-size:0.85rem; color:#555; margin-bottom:4px;">${s.leftTeamName}</div>
+            <div style="font-size:2.5rem; font-weight:900; color:#2563eb; line-height:1;">${scores.leftTotal}</div>
+          </div>
+          <div style="font-size:1.5rem; color:#bbb;">:</div>
+          <div style="text-align:center;">
+            <div style="font-size:0.85rem; color:#555; margin-bottom:4px;">${s.rightTeamName}</div>
+            <div style="font-size:2.5rem; font-weight:900; color:#dc2626; line-height:1;">${scores.rightTotal}</div>
+          </div>
+        </div>
+        <div style="text-align:center; font-size:1rem; font-weight:700; color:#6366f1; margin-bottom:14px;">${winner}</div>
+        ${gameRows ? `<div style="font-size:0.8rem; color:#888; font-weight:700; margin-bottom:4px;">게임별</div>${gameRows}` : ''}
+      `;
+      document.getElementById('summaryModal').classList.remove('hidden');
+    }
+
+    function copySessionSummary() {
+      const s = getActiveSession();
+      if (!s) return;
+      const scores = App.Session.getScores(s.id);
+      const records = App.Record.bySession(s.id);
+      const groups = [];
+      const keyIndex = {};
+      records.forEach(r => {
+        const key = r.repertoireItemId || '__none__';
+        if (keyIndex[key] === undefined) { keyIndex[key] = groups.length; groups.push({ key, records: [] }); }
+        groups[keyIndex[key]].records.push(r);
+      });
+      const winner = scores.leftTotal > scores.rightTotal ? `🏆 ${s.leftTeamName} 우승`
+        : scores.rightTotal > scores.leftTotal ? `🏆 ${s.rightTeamName} 우승`
+        : '🤝 무승부';
+      const lines = [
+        `📋 ${s.title}`,
+        `${s.leftTeamName} ${scores.leftTotal} : ${scores.rightTotal} ${s.rightTeamName}`,
+        winner,
+        '',
+        ...groups.map((group, i) => {
+          const item = group.key !== '__none__' ? App.RepertoireItem.byId(group.key) : null;
+          const game = item ? App.Game.byId(item.gameId) : null;
+          const leftSub = group.records.reduce((sum, r) => sum + (r.leftPoints || 0), 0);
+          const rightSub = group.records.reduce((sum, r) => sum + (r.rightPoints || 0), 0);
+          return `${i + 1}. ${game ? game.name : '기타'}: ${s.leftTeamName} ${leftSub} : ${rightSub} ${s.rightTeamName}`;
+        }),
+      ];
+      navigator.clipboard.writeText(lines.join('\n'))
+        .then(() => showToast('클립보드에 복사됐습니다.'))
+        .catch(() => showToast('복사 실패. 직접 선택해 주세요.', 'error'));
     }
 
     function stepPersonCount(itemId, side, delta) {
@@ -1256,11 +1370,14 @@
     function undoLastRecord() {
       const s = getActiveSession();
       if (!s) return;
-      const deleted = App.Record.deleteLatest(s.id);
-      if (!deleted) { showToast('취소할 기록이 없습니다.', 'error'); return; }
-      renderHeader();
-      renderProgress();
-      renderRecords();
+      if (!App.Record.bySession(s.id).length) { showToast('취소할 기록이 없습니다.', 'error'); return; }
+      showConfirm('가장 최근 기록을 삭제하시겠습니까?', () => {
+        const deleted = App.Record.deleteLatest(s.id);
+        if (!deleted) { showToast('취소할 기록이 없습니다.', 'error'); return; }
+        renderHeader();
+        renderProgress();
+        renderRecords();
+      }, '삭제');
     }
 
     function editRecord(id) {
@@ -1314,8 +1431,21 @@
       });
     });
 
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(m => m.classList.add('hidden'));
+      }
+    });
+
     // === Timer ===
     let _timerTick = null;
+
+    function startCustomTimer() {
+      const val = Number(document.getElementById('timerCustomInput').value) || 0;
+      if (val <= 0) { showToast('시간을 입력해 주세요. (단위: 초)', 'error'); return; }
+      startTimer(val);
+      document.getElementById('timerCustomInput').value = '';
+    }
 
     function startTimer(seconds) {
       App.Timer.start(seconds * 1000);
