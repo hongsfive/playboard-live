@@ -117,6 +117,17 @@
     </div>
   </div>
 
+  <div id="timerBar" class="timer-bar">
+    <div id="timerCount" class="timer-count">⏱</div>
+    <div class="timer-presets">
+      <button class="timer-preset-btn" onclick="startTimer(30)">30초</button>
+      <button class="timer-preset-btn" onclick="startTimer(60)">1분</button>
+      <button class="timer-preset-btn" onclick="startTimer(120)">2분</button>
+      <button class="timer-preset-btn" onclick="startTimer(180)">3분</button>
+    </div>
+    <button class="timer-stop-btn hidden" id="timerStopBtn" onclick="stopTimer()">■ 정지</button>
+  </div>
+
   <div class="modal-overlay hidden" id="gameModal">
     <div class="modal">
       <div class="modal-title" id="gameModalTitle">새 게임</div>
@@ -1246,6 +1257,54 @@
         if (e.target === overlay) overlay.classList.add('hidden');
       });
     });
+
+    // === Timer ===
+    let _timerTick = null;
+
+    function startTimer(seconds) {
+      App.Timer.start(seconds * 1000);
+      document.querySelectorAll('.timer-preset-btn').forEach(b => {
+        b.classList.toggle('timer-preset--active', b.textContent === (seconds < 60 ? seconds + '초' : (seconds / 60) + '분'));
+      });
+      if (_timerTick) clearInterval(_timerTick);
+      _timerTick = setInterval(_updateTimerBar, 200);
+      _updateTimerBar();
+    }
+
+    function stopTimer() {
+      App.Timer.stop();
+      if (_timerTick) { clearInterval(_timerTick); _timerTick = null; }
+      _updateTimerBar();
+    }
+
+    function _updateTimerBar() {
+      const remaining = App.Timer.getRemainingMs();
+      const state = App.Timer.getState();
+      const countEl = document.getElementById('timerCount');
+      const stopBtn = document.getElementById('timerStopBtn');
+
+      if (state.status !== 'running' || remaining <= 0) {
+        if (state.status === 'running') App.Timer.stop();
+        countEl.textContent = '⏱';
+        countEl.classList.remove('timer--urgent');
+        stopBtn.classList.add('hidden');
+        document.querySelectorAll('.timer-preset-btn').forEach(b => b.classList.remove('timer-preset--active'));
+        if (_timerTick) { clearInterval(_timerTick); _timerTick = null; }
+        return;
+      }
+
+      const secs = Math.ceil(remaining / 1000);
+      const m = Math.floor(secs / 60), s = secs % 60;
+      countEl.textContent = `${m}:${String(s).padStart(2, '0')}`;
+      countEl.classList.toggle('timer--urgent', secs <= 10);
+      stopBtn.classList.remove('hidden');
+    }
+
+    // 페이지 로드 시 타이머 실행 중이면 재개
+    if (App.Timer.getState().status === 'running') {
+      _timerTick = setInterval(_updateTimerBar, 200);
+      _updateTimerBar();
+    }
 
     renderHeader();
     activateTab(new URLSearchParams(location.search).get('tab') || 'games');

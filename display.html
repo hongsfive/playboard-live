@@ -35,6 +35,11 @@
         </div>
       </div>
 
+      <!-- Timer -->
+      <div id="displayTimer" class="display-timer" style="display:none;">
+        <div class="display-timer-count" id="displayTimerCount">0:00</div>
+      </div>
+
       <!-- Current Game -->
       <div class="display-current-game" id="currentGame"></div>
 
@@ -131,9 +136,43 @@
       }
     }
 
-    // Auto-refresh every 2 seconds
+    // === Timer ===
+    let _timerWasUrgent = false;
+
+    function renderTimer() {
+      const remaining = App.Timer.getRemainingMs();
+      const state = App.Timer.getState();
+      const el = document.getElementById('displayTimer');
+      const countEl = document.getElementById('displayTimerCount');
+
+      if (state.status !== 'running' || remaining <= 0) {
+        if (state.status === 'running') App.Timer.stop();
+        el.style.display = 'none';
+        _timerWasUrgent = false;
+        return;
+      }
+
+      el.style.display = 'block';
+      const secs = Math.ceil(remaining / 1000);
+      const m = Math.floor(secs / 60), s = secs % 60;
+      countEl.textContent = `${m}:${String(s).padStart(2, '0')}`;
+
+      const isUrgent = secs <= 10;
+      el.classList.toggle('display-timer--urgent', isUrgent);
+
+      // 10초 진입 시 한 번만 flash
+      if (isUrgent && !_timerWasUrgent) {
+        el.classList.add('display-timer--flash');
+        setTimeout(() => el.classList.remove('display-timer--flash'), 500);
+      }
+      _timerWasUrgent = isUrgent;
+    }
+
+    // Auto-refresh: score 2초, timer 500ms
     render();
+    renderTimer();
     setInterval(render, 2000);
+    setInterval(renderTimer, 500);
   </script>
 </body>
 </html>

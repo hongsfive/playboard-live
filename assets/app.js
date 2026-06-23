@@ -371,9 +371,31 @@ function seedSampleData() {
   console.log('[App] Sample data seeded.');
 }
 
+/* === Timer === */
+const Timer = {
+  KEY: 'rec_timer',
+  start(durationMs) {
+    save(this.KEY, { status: 'running', endAt: Date.now() + durationMs });
+  },
+  stop() {
+    save(this.KEY, { status: 'idle', endAt: null });
+  },
+  getState() {
+    try {
+      const raw = localStorage.getItem(this.KEY);
+      return raw ? JSON.parse(raw) : { status: 'idle' };
+    } catch { return { status: 'idle' }; }
+  },
+  getRemainingMs() {
+    const st = this.getState();
+    if (st.status !== 'running' || !st.endAt) return 0;
+    return Math.max(0, st.endAt - Date.now());
+  },
+};
+
 /* === Export for browser === */
 window.App = {
-  Game, Repertoire, RepertoireItem, Session, Record,
+  Game, Repertoire, RepertoireItem, Session, Record, Timer,
   calculatePoints, calculateQuizPoints, inferScoringMode, seedSampleData, STORAGE_KEYS,
   load, save, genId,
 };
