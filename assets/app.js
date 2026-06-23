@@ -404,10 +404,15 @@ const Timer = {
 
 /* === Firebase Sync === */
 let _fbPushTimer = null;
+let _fbPushPending = false;
 
 window._fbSchedulePush = function() {
   clearTimeout(_fbPushTimer);
-  _fbPushTimer = setTimeout(() => Firebase.push(), 600);
+  _fbPushPending = true;
+  _fbPushTimer = setTimeout(() => {
+    _fbPushTimer = null;
+    Firebase.push();
+  }, 600);
 };
 
 const Firebase = {
@@ -441,7 +446,9 @@ const Firebase = {
         return;
       }
 
-      // 다른 기기에서 변경된 경우
+      // 자신의 push 에코는 무시 (로컬이 더 최신)
+      if (_fbPushPending) return;
+
       if (!data) return;
       let changed = false;
       Object.entries(data).forEach(([k, v]) => {
@@ -471,7 +478,9 @@ const Firebase = {
     });
     const timerRaw = localStorage.getItem(Timer.KEY);
     if (timerRaw) { try { data[Timer.KEY] = JSON.parse(timerRaw); } catch {} }
-    this._db.ref('sb').set(data).catch(e => console.warn('[Firebase]', e));
+    this._db.ref('sb').set(data)
+      .then(() => setTimeout(() => { _fbPushPending = false; }, 800))
+      .catch(e => { _fbPushPending = false; console.warn('[Firebase]', e); });
   },
 };
 
