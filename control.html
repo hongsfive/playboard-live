@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Playboard Live — 운영 화면</title>
   <link rel="stylesheet" href="assets/style.css">
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 </head>
 <body>
   <div id="app">
@@ -1308,6 +1310,17 @@
 
     renderHeader();
     activateTab(new URLSearchParams(location.search).get('tab') || 'games');
+  </script>
+  <script>
+    App.Firebase.init({
+      apiKey: "AIzaSyCcqOqEDuUEfGESDhj5tsw0fwfHFnWcQx8",
+      authDomain: "playboard-live.firebaseapp.com",
+      databaseURL: "https://playboard-live-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "playboard-live",
+      storageBucket: "playboard-live.firebasestorage.app",
+      messagingSenderId: "1056586454779",
+      appId: "1:1056586454779:web:42d432d6593d518b82c25e"
+    });
   </script>
 </body>
 </html>

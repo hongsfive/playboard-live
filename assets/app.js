@@ -21,6 +21,7 @@ function load(key) {
 }
 function save(key, data) {
   localStorage.setItem(key, JSON.stringify(data));
+  if (window._fbSchedulePush) window._fbSchedulePush();
 }
 function genId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -223,12 +224,18 @@ const Session = {
   replaceRepertoire(sessionId, repertoireId) {
     return this.update(sessionId, { repertoireId: repertoireId || '' });
   },
-  setActive(id) { localStorage.setItem(STORAGE_KEYS.ACTIVE_SESSION, id); },
+  setActive(id) {
+    localStorage.setItem(STORAGE_KEYS.ACTIVE_SESSION, id);
+    if (window._fbSchedulePush) window._fbSchedulePush();
+  },
   getActive() {
     const id = localStorage.getItem(STORAGE_KEYS.ACTIVE_SESSION);
     return id ? this.byId(id) : null;
   },
-  clearActive() { localStorage.removeItem(STORAGE_KEYS.ACTIVE_SESSION); },
+  clearActive() {
+    localStorage.removeItem(STORAGE_KEYS.ACTIVE_SESSION);
+    if (window._fbSchedulePush) window._fbSchedulePush();
+  },
   getCompletedItemIds(sessionId) {
     const session = this.byId(sessionId);
     return Array.isArray(session?.completedItemIds) ? session.completedItemIds : [];
@@ -393,9 +400,77 @@ const Timer = {
   },
 };
 
+/* === Firebase Sync === */
+let _fbPushTimer = null;
+
+window._fbSchedulePush = function() {
+  clearTimeout(_fbPushTimer);
+  _fbPushTimer = setTimeout(() => Firebase.push(), 600);
+};
+
+const Firebase = {
+  _db: null,
+  _initialized: false,
+
+  init(config) {
+    this._initialized = false;
+    const fbApp = firebase.initializeApp(config);
+    this._db = firebase.database(fbApp);
+
+    this._db.ref('sb').on('value', snap => {
+      const data = snap.val();
+
+      if (!this._initialized) {
+        this._initialized = true;
+        if (data) {
+          Object.entries(data).forEach(([k, v]) => {
+            localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
+          });
+          if (typeof window._onFirebaseSync === 'function') window._onFirebaseSync();
+        } else {
+          // Firebase 비어 있음 — 로컬 데이터 업로드
+          setTimeout(() => this.push(), 100);
+        }
+        return;
+      }
+
+      // 다른 기기에서 변경된 경우
+      if (!data) return;
+      let changed = false;
+      Object.entries(data).forEach(([k, v]) => {
+        const incoming = typeof v === 'string' ? v : JSON.stringify(v);
+        if (localStorage.getItem(k) !== incoming) {
+          localStorage.setItem(k, incoming);
+          changed = true;
+        }
+      });
+      if (changed && typeof window._onFirebaseSync === 'function') {
+        window._onFirebaseSync();
+      }
+    });
+  },
+
+  push() {
+    if (!this._db || !this._initialized) return;
+    const data = {};
+    Object.values(STORAGE_KEYS).forEach(key => {
+      const raw = localStorage.getItem(key);
+      if (raw === null) return;
+      if (key === STORAGE_KEYS.ACTIVE_SESSION) {
+        data[key] = raw; // raw string (세션 ID)
+      } else {
+        try { data[key] = JSON.parse(raw); } catch {}
+      }
+    });
+    const timerRaw = localStorage.getItem(Timer.KEY);
+    if (timerRaw) { try { data[Timer.KEY] = JSON.parse(timerRaw); } catch {} }
+    this._db.ref('sb').set(data).catch(e => console.warn('[Firebase]', e));
+  },
+};
+
 /* === Export for browser === */
 window.App = {
-  Game, Repertoire, RepertoireItem, Session, Record, Timer,
+  Game, Repertoire, RepertoireItem, Session, Record, Timer, Firebase,
   calculatePoints, calculateQuizPoints, inferScoringMode, seedSampleData, STORAGE_KEYS,
   load, save, genId,
 };
