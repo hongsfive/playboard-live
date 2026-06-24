@@ -1830,6 +1830,7 @@
     }
 
     function toggleAnnouncement() {
+      if (!_musicAudio || _musicAudio.paused) return; // 재생 중이 아니면 무시
       _musicIsAnnouncement = !_musicIsAnnouncement;
       const targetVol = _musicIsAnnouncement ? _musicAnnouncementVol : MUSIC_NORMAL_VOL;
       if (_musicAudio) _musicFade(_musicAudio, targetVol, MUSIC_FADE_MS);
