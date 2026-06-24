@@ -18,11 +18,11 @@
     <div class="app-header">
       <div style="min-width:0;">
         <a href="index.html" style="font-size:0.85rem; opacity:0.7;">← 홈</a>
-        <div id="headerScore" class="session-info" style="font-size:0.82rem; opacity:0.75; margin-top:2px;"></div>
       </div>
-      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; flex-shrink:0;">
+      <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+        <button id="headerMentBtn" onclick="toggleAnnouncement()" style="min-height:36px; padding:4px 10px; font-size:0.82rem; font-weight:700; border-radius:8px; cursor:pointer; border:2px solid #d1d5db; background:#f3f4f6; color:#374151; touch-action:manipulation; -webkit-tap-highlight-color:transparent;">🎙 멘트</button>
+        <button onclick="stopMusic()" style="min-height:36px; padding:4px 10px; font-size:0.82rem; font-weight:700; border-radius:8px; cursor:pointer; border:2px solid #d1d5db; background:#f3f4f6; color:#374151; touch-action:manipulation; -webkit-tap-highlight-color:transparent;">■ 정지</button>
         <span id="headerRoomCode" style="display:none; font-size:0.85rem; font-weight:700; background:#eef2ff; color:#4f46e5; padding:4px 12px; border-radius:8px; cursor:pointer; letter-spacing:2px;" onclick="showRoomCodeModal()" title="방 코드 관리"></span>
-        <button id="openDisplayBtn" class="btn btn--outline btn--sm" style="display:none;" onclick="openDisplayScreen()">관객 화면</button>
       </div>
     </div>
 
@@ -506,13 +506,6 @@
       const s = getActiveSession();
       document.getElementById('noSessionWarning').style.display = s ? 'none' : 'block';
       document.getElementById('mainContent').style.display = 'block';
-      if (s) {
-        const scores = App.Session.getScores(s.id);
-        document.getElementById('headerScore').textContent =
-          `${s.title}  ·  ${s.leftTeamName} ${scores.leftTotal} : ${scores.rightTotal} ${s.rightTeamName}`;
-      } else {
-        document.getElementById('headerScore').textContent = '세션 없음 — 세션 탭에서 활성화해 주세요';
-      }
     }
 
     document.querySelectorAll('.nav-tab').forEach(tab => {
@@ -1776,6 +1769,12 @@
       setMusicState({ isAnnouncement: _musicIsAnnouncement, commandId: Date.now().toString(), command: 'announcement' });
       const btn = document.getElementById('musicMentBtn');
       if (btn) btn.classList.toggle('music-ment-btn--active', _musicIsAnnouncement);
+      const hBtn = document.getElementById('headerMentBtn');
+      if (hBtn) {
+        hBtn.style.background = _musicIsAnnouncement ? '#4f46e5' : '#f3f4f6';
+        hBtn.style.color = _musicIsAnnouncement ? '#fff' : '#374151';
+        hBtn.style.borderColor = _musicIsAnnouncement ? '#4f46e5' : '#d1d5db';
+      }
     }
 
     function cycleRepeatMode() {
@@ -1957,7 +1956,6 @@
         }
         localStorage.setItem('_pbauth_uid', user.uid);
         overlay.classList.add('hidden');
-        document.getElementById('openDisplayBtn').style.display = '';
         const _emailEl = document.getElementById('modalUserEmail');
         if (_emailEl) _emailEl.textContent = '로그인: ' + (user.email || user.displayName || user.uid);
         App.Firebase.loadRoomCode(code => updateRoomCodeHeader(code));
@@ -1973,7 +1971,6 @@
         activateTab(_initTab);
       } else {
         overlay.classList.remove('hidden');
-        document.getElementById('openDisplayBtn').style.display = 'none';
         document.getElementById('headerRoomCode').style.display = 'none';
       }
     };
