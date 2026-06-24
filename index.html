@@ -9,37 +9,194 @@
   <link rel="manifest" href="manifest.json">
   <title>Playboard Live</title>
   <link rel="stylesheet" href="assets/style.css">
+  <style>
+    body { background: #0f172a; }
+
+    .home-wrap {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 20px 56px;
+    }
+
+    .home-hero {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: relative;
+      width: 100%;
+      max-width: 540px;
+      padding-bottom: 44px;
+    }
+
+    .home-hero::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(rgba(99,102,241,0.10) 1px, transparent 1px);
+      background-size: 30px 30px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .home-hero > * { position: relative; z-index: 1; }
+
+    .home-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(99,102,241,0.12);
+      border: 1px solid rgba(99,102,241,0.28);
+      color: #a5b4fc;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      padding: 4px 13px;
+      border-radius: 20px;
+      margin-bottom: 22px;
+    }
+
+    .home-title {
+      font-size: clamp(2.2rem, 10vw, 3.4rem);
+      font-weight: 800;
+      color: #f8fafc;
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+      margin-bottom: 10px;
+    }
+
+    .home-sub {
+      font-size: 0.95rem;
+      color: rgba(255,255,255,0.42);
+      margin-bottom: 28px;
+      letter-spacing: -0.01em;
+    }
+
+    .home-session {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+    .home-session--none {
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.35);
+    }
+    .home-session--active {
+      background: rgba(34,197,94,0.13);
+      border: 1px solid rgba(34,197,94,0.28);
+      color: #86efac;
+    }
+    .home-session--active::before {
+      content: '';
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 6px #22c55e;
+      flex-shrink: 0;
+    }
+
+    .home-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      width: 100%;
+      max-width: 540px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .home-card {
+      background: #1e293b;
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 18px;
+      padding: 32px 20px 26px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 6px;
+      color: #fff;
+      text-decoration: none;
+      transition: transform 0.16s, border-color 0.16s, box-shadow 0.16s;
+      overflow: hidden;
+    }
+    .home-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(99,102,241,0.45);
+      box-shadow: 0 12px 36px rgba(0,0,0,0.35), 0 0 0 1px rgba(99,102,241,0.15);
+    }
+    .home-card:active { transform: translateY(-1px); }
+
+    .home-card__icon {
+      font-size: 2.4rem;
+      margin-bottom: 6px;
+      line-height: 1;
+    }
+    .home-card__title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      letter-spacing: -0.02em;
+    }
+    .home-card__desc {
+      font-size: 0.76rem;
+      color: rgba(255,255,255,0.38);
+      line-height: 1.45;
+      margin-top: 2px;
+    }
+    .home-card__cta {
+      margin-top: 14px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #818cf8;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    @media (max-width: 420px) {
+      .home-wrap { padding: 36px 16px 48px; }
+      .home-title { font-size: 2rem; }
+      .home-cards { gap: 10px; }
+      .home-card { padding: 26px 14px 22px; border-radius: 14px; }
+      .home-card__icon { font-size: 2rem; }
+      .home-card__title { font-size: 0.95rem; }
+    }
+  </style>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 </head>
 <body>
-  <div class="container" style="max-width:720px;">
-    <div class="app-header" style="border-radius:0 0 12px 12px; margin-bottom:24px;">
-      <div>
-        <h1>🎯 레크레이션 운영 앱</h1>
-        <div class="session-info">메인 화면은 빠른 진입만 제공합니다.</div>
-      </div>
-      <div style="text-align:right;">
-        <div class="session-info" id="activeSessionLabel">활성 세션 없음</div>
-      </div>
+  <div class="home-wrap">
+    <div class="home-hero">
+      <div class="home-badge">🎯 Recreation Scoreboard</div>
+      <h1 class="home-title">Playboard Live</h1>
+      <p class="home-sub">레크레이션 행사 점수 운영 시스템</p>
+      <div class="home-session home-session--none" id="activeSessionBadge">활성 세션 없음</div>
     </div>
 
-    <div class="card" style="margin-bottom:16px; background:#f8fbff; border:1px solid #d6e6ff;">
-      <div style="font-weight:700; margin-bottom:6px;">사용 흐름</div>
-      <div class="text-sm text-muted">운영 화면에서 게임리스트 · 레퍼토리 · 세션 관리까지 모두 진행하고, 관객 점수판은 별도 화면으로 띄우면 됩니다.</div>
-    </div>
-
-    <div class="grid grid--2">
-      <a href="control.html" class="card card--clickable text-center" style="padding:32px 24px;">
-        <div style="font-size:2.2rem; margin-bottom:10px;">🎮</div>
-        <div style="font-weight:700; font-size:1.1rem;">운영 화면</div>
-        <div class="text-sm text-muted mt-1">게임리스트 · 레퍼토리 · 세션 관리 · 진행 · 기록</div>
+    <div class="home-cards">
+      <a href="control.html" class="home-card">
+        <div class="home-card__icon">🎮</div>
+        <div class="home-card__title">운영 화면</div>
+        <div class="home-card__desc">게임 · 레퍼토리<br>세션 · 진행 · 기록</div>
+        <div class="home-card__cta">시작 →</div>
       </a>
-      <a id="displayLink" href="display.html" target="_blank" class="card card--clickable text-center" style="padding:32px 24px;">
-        <div style="font-size:2.2rem; margin-bottom:10px;">📺</div>
-        <div style="font-weight:700; font-size:1.1rem;">관객 점수판</div>
-        <div class="text-sm text-muted mt-1">읽기 전용 전광판 화면</div>
+      <a id="displayLink" href="display.html" target="_blank" class="home-card">
+        <div class="home-card__icon">📺</div>
+        <div class="home-card__title">관객 점수판</div>
+        <div class="home-card__desc">읽기 전용<br>전광판 화면</div>
+        <div class="home-card__cta">열기 →</div>
       </a>
     </div>
   </div>
@@ -51,7 +208,11 @@
       if (link && user) link.href = `display.html?uid=${user.uid}`;
     };
     const active = App.Session.getActive();
-    document.getElementById('activeSessionLabel').textContent = active ? `활성 세션: ${active.title}` : '활성 세션 없음';
+    const badge = document.getElementById('activeSessionBadge');
+    if (active) {
+      badge.textContent = active.title;
+      badge.className = 'home-session home-session--active';
+    }
   </script>
   <script>
     App.Firebase.init({
