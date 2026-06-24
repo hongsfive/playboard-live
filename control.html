@@ -163,13 +163,14 @@
     <div id="progressBottomBar" class="progress-bottom-bar" style="display:none;">
       <div class="progress-bottom-bar__main" id="progressBottomMain">세션을 선택해 주세요</div>
       <div class="progress-bottom-bar__score" id="progressBottomScore"></div>
+      <div style="display:flex; align-items:center; gap:2px; flex-shrink:0; margin-left:auto;">
+        <button id="headerMentBtn" onclick="toggleAnnouncement()" title="멘트" style="background:none; border:none; font-size:1.3rem; color:rgba(255,255,255,0.45); padding:4px 6px; cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent;">🎙</button>
+        <button onclick="stopMusic()" title="음악 정지" style="background:none; border:none; font-size:1.15rem; color:rgba(255,255,255,0.45); padding:4px 6px; cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent;">⏹</button>
+      </div>
     </div>
   </div>
 
   <div id="timerBar" class="timer-bar">
-    <button id="headerMentBtn" onclick="toggleAnnouncement()" title="멘트" style="background:none; border:none; font-size:1.25rem; color:rgba(255,255,255,0.45); padding:2px 4px; cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent; flex-shrink:0;">🎙</button>
-    <button onclick="stopMusic()" title="음악 정지" style="background:none; border:none; font-size:1.1rem; color:rgba(255,255,255,0.45); padding:2px 4px; cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent; flex-shrink:0;">⏹</button>
-    <div style="width:1px; height:18px; background:rgba(255,255,255,0.15); flex-shrink:0; margin:0 2px;"></div>
     <div id="timerCount" class="timer-count">⏱</div>
     <div class="timer-presets">
       <button class="timer-preset-btn" onclick="startTimer(30)">30초</button>

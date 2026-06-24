@@ -25,7 +25,7 @@ input, textarea, select { font: inherit; }
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 .app-header h1 { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.01em; }
 .app-header .session-info { font-size: 0.8rem; opacity: 0.7; margin-top: 2px; }
