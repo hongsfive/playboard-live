@@ -1897,7 +1897,8 @@
     }
 
     function _roomCodeUrl(code) {
-      return `${location.origin}${location.pathname.replace('control.html', '')}display.html?code=${code}`;
+      // pathname에서 .html이 제거될 수 있으므로(Netlify Pretty URLs) origin 기준 고정 경로 사용
+      return `${location.origin}/display.html?code=${code}`;
     }
 
     function updateRoomCodeHeader(code) {
