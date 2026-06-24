@@ -705,7 +705,9 @@ input, textarea, select { font: inherit; }
   }
   .repertoire-item .item-actions > * { flex: 1 1 calc(33% - 6px); }
   .progress-game-card { padding: 14px; }
-  .progress-bottom-bar { flex-direction: column; align-items: flex-start; gap: 3px; }
+  .progress-bottom-bar { flex-wrap: wrap; gap: 2px 6px; }
+  .progress-bottom-bar__main { flex: 0 0 100%; }
+  .progress-bottom-bar__score { flex: 1; }
   .scoreboard { gap: 16px; padding: 16px 8px; }
   .team-score .score { font-size: 2.5rem; }
   .display-scoreboard .score { font-size: 5.5rem; }
