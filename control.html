@@ -1671,29 +1671,22 @@
       fetch('audio/manifest.json')
         .then(r => r.json())
         .then(files => {
-          const tracks = getMusicTracks();
-          const existingFilenames = new Set(tracks.map(t => t.filename));
-          let added = 0;
-          files.forEach(entry => {
+          // 로컬 업로드 트랙만 유지하고 서버 트랙 전체를 매니페스트로 교체
+          const existing = getMusicTracks();
+          const localTracks = existing.filter(t => t.local);
+          const serverTracks = files.map(entry => {
             const filename = typeof entry === 'string' ? entry : entry.filename;
-            if (!existingFilenames.has(filename)) {
-              const id = 'tr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
-              const track = { id, filename, local: false };
-              if (typeof entry === 'object') {
-                if (entry.title) track.title = entry.title;
-                if (entry.artist) track.artist = entry.artist;
-              }
-              tracks.push(track);
-              added++;
+            const id = 'tr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+            const track = { id, filename, local: false };
+            if (typeof entry === 'object') {
+              if (entry.title) track.title = entry.title;
+              if (entry.artist) track.artist = entry.artist;
             }
+            return track;
           });
-          if (added > 0) {
-            saveMusicTracks(tracks);
-            renderMusicTab();
-            showToast(`${added}개 트랙이 추가됐습니다.`);
-          } else {
-            showToast('새로 추가할 파일이 없습니다.');
-          }
+          saveMusicTracks([...serverTracks, ...localTracks]);
+          renderMusicTab();
+          showToast(`서버 트랙 ${serverTracks.length}개로 교체됐습니다.`);
         })
         .catch(() => showToast('서버 파일 목록을 불러올 수 없습니다.', 'error'));
     }
@@ -1828,7 +1821,7 @@
             <span class="music-track-drag">⠿</span>
             <div style="flex:1; min-width:0;">
               <div class="music-track-title">${title}</div>
-              ${artist ? `<div class="music-track-artist">${artist}</div>` : ''}
+              <div class="music-track-artist" style="font-size:0.7rem;opacity:0.55;">${track.filename}</div>
             </div>
             ${track.local ? '<div class="music-track-local-badge">기기</div>' : ''}
             <button class="music-track-remove" onclick="event.stopPropagation();removeMusicTrack('${track.id}')">✕</button>
