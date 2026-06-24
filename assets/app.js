@@ -220,13 +220,32 @@ const Session = {
     return session;
   },
   update(id, patch) { return update(STORAGE_KEYS.SESSIONS, id, patch); },
+  // Tombstone: 삭제된 세션 ID를 로컬에 보관 — Firebase가 stale 데이터를 복원해도 즉시 재제거
+  _TOMB_KEY: '_pb_del_sessions',
+  _getTombstones() {
+    try { return new Set(JSON.parse(localStorage.getItem(this._TOMB_KEY) || '[]')); } catch { return new Set(); }
+  },
+  _addTombstone(id) {
+    const t = this._getTombstones(); t.add(id);
+    localStorage.setItem(this._TOMB_KEY, JSON.stringify([...t]));
+  },
+  _clearTombstones() { localStorage.removeItem(this._TOMB_KEY); },
+  _applyTombstones() {
+    const t = this._getTombstones();
+    if (!t.size) return false;
+    const sessions = findAll(STORAGE_KEYS.SESSIONS).filter(s => !t.has(s.id));
+    localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(sessions));
+    const aid = localStorage.getItem(STORAGE_KEYS.ACTIVE_SESSION);
+    if (aid && t.has(aid)) localStorage.removeItem(STORAGE_KEYS.ACTIVE_SESSION);
+    return true;
+  },
   delete(id) {
+    this._addTombstone(id);
     if (localStorage.getItem(STORAGE_KEYS.ACTIVE_SESSION) === id) {
       localStorage.removeItem(STORAGE_KEYS.ACTIVE_SESSION);
     }
     remove(STORAGE_KEYS.SESSIONS, id);
     Record.bySession(id).forEach(r => Record.delete(r.id));
-    // 즉시 Firebase 반영 (디바운스 없이) — display.html이 stale 데이터를 보는 것 방지
     if (window._fbPushNow) window._fbPushNow();
   },
   replaceRepertoire(sessionId, repertoireId) {
@@ -478,18 +497,18 @@ const Firebase = {
       const data = snap.val();
       if (!this._initialized) {
         this._initialized = true;
-        // 로컬에 데이터가 있으면 로컬이 정본 — Firebase를 덮어쓰지 않고 로컬을 Firebase로 push
-        const hasLocal = Object.values(STORAGE_KEYS).some(k => localStorage.getItem(k) !== null);
-        if (hasLocal) {
-          setTimeout(() => this.push(), 100);
-          if (typeof window._onFirebaseSync === 'function') window._onFirebaseSync();
-        } else if (data) {
-          // 로컬 데이터 없음 (새 기기) → Firebase에서 로드
+        if (data) {
           Object.entries(data).forEach(([k, v]) => {
             localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
           });
-          if (typeof window._onFirebaseSync === 'function') window._onFirebaseSync();
+          // Tombstone 적용: Firebase에서 불러온 데이터에서 로컬 삭제 세션 제거 후 재push
+          if (Session._applyTombstones()) {
+            setTimeout(() => this.push(), 100);
+          }
+        } else {
+          setTimeout(() => this.push(), 100);
         }
+        if (typeof window._onFirebaseSync === 'function') window._onFirebaseSync();
         return;
       }
       if (_fbPushPending) return;
@@ -511,8 +530,7 @@ const Firebase = {
     if (!this._db) return;
     this._db.ref(`users/${uid}/sb`).on('value', snap => {
       const data = snap.val();
-      // 매번 전체 초기화 후 재적용 — Firebase에서 삭제된 키(예: rec_active_session)가
-      // localStorage에 남아 stale 세션이 표시되는 버그 방지
+      // 매번 전체 초기화 후 재적용 — Firebase에서 삭제된 키가 localStorage에 잔존하는 버그 방지
       Object.values(STORAGE_KEYS).forEach(k => localStorage.removeItem(k));
       localStorage.removeItem(Timer.KEY);
       if (data) {
@@ -520,6 +538,8 @@ const Firebase = {
           localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
         });
       }
+      // Tombstone 적용: 로컬에서 삭제된 세션은 Firebase 데이터에도 표시하지 않음
+      Session._applyTombstones();
       if (typeof window._onFirebaseSync === 'function') window._onFirebaseSync();
     });
   },
@@ -613,8 +633,15 @@ const Firebase = {
     Object.values(STORAGE_KEYS).forEach(key => {
       const raw = localStorage.getItem(key);
       if (raw === null) return;
-      if (key === STORAGE_KEYS.ACTIVE_SESSION || key === STORAGE_KEYS.MUSIC_TRACKS) {
-        data[key] = raw; // 배열 구조 보존: Firebase object 변환 방지
+      if (key === STORAGE_KEYS.ACTIVE_SESSION) {
+        data[key] = raw;
+      } else if (key === STORAGE_KEYS.MUSIC_TRACKS) {
+        // 로컬 파일(ObjectURL) 트랙은 Firebase에 동기화하지 않음 — 다른 기기에서 재생 불가
+        try {
+          const tracks = JSON.parse(raw);
+          const arr = Array.isArray(tracks) ? tracks : Object.values(tracks);
+          data[key] = JSON.stringify(arr.filter(t => !t.local));
+        } catch { data[key] = raw; }
       } else {
         try { data[key] = JSON.parse(raw); } catch {}
       }
@@ -622,7 +649,10 @@ const Firebase = {
     const timerRaw = localStorage.getItem(Timer.KEY);
     if (timerRaw) { try { data[Timer.KEY] = JSON.parse(timerRaw); } catch {} }
     ref.set(data)
-      .then(() => setTimeout(() => { _fbPushPending = false; }, 800))
+      .then(() => {
+        Session._clearTombstones(); // push 성공 시 tombstone 해제
+        setTimeout(() => { _fbPushPending = false; }, 800);
+      })
       .catch(e => { _fbPushPending = false; console.warn('[Firebase]', e); });
   },
 };
