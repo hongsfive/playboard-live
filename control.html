@@ -132,6 +132,15 @@
             <button class="btn btn--outline btn--sm" id="musicStopBtn" onclick="stopMusic()">■ 정지</button>
           </div>
 
+          <div style="display:flex; align-items:center; gap:10px; padding:6px 0 2px; font-size:0.82rem; color:#6b7280;">
+            <span style="white-space:nowrap;">🎙 멘트 볼륨</span>
+            <input type="range" id="mentVolSlider" min="5" max="50" step="5"
+              value="15"
+              style="flex:1; accent-color:#4f46e5;"
+              oninput="onMentVolChange(this.value)">
+            <span id="mentVolLabel" style="min-width:32px; text-align:right; font-weight:600;">15%</span>
+          </div>
+
           <div id="musicNowPlaying" class="music-now-playing" style="display:none;"></div>
 
           <div class="music-track-grid" id="musicTrackGrid"></div>
@@ -1599,8 +1608,8 @@
     let _musicRepeatMode = 'one';
     let _musicEditMode = false;
     const MUSIC_NORMAL_VOL = 1.0;
-    const MUSIC_ANNOUNCEMENT_VOL = 0.15;
     const MUSIC_FADE_MS = 600;
+    let _musicAnnouncementVol = parseFloat(localStorage.getItem('_pb_ment_vol') || '0.15');
 
     function _musicFade(audio, targetVol, ms, cb) {
       const startVol = audio.volume;
@@ -1724,12 +1733,12 @@
 
       _musicAudio = new Audio(url);
       _musicAudio.preload = 'auto';
-      _musicAudio.volume = _musicIsAnnouncement ? MUSIC_ANNOUNCEMENT_VOL : MUSIC_NORMAL_VOL;
+      _musicAudio.volume = _musicIsAnnouncement ? _musicAnnouncementVol : MUSIC_NORMAL_VOL;
       _musicAudio.play().catch(err => showToast('재생 오류: ' + err.message, 'error'));
       _musicAudio.addEventListener('ended', _onMusicEnded);
       _musicCurrentTrackId = trackId;
 
-      setMusicState({ trackId, filename: track.filename, command: 'play', isAnnouncement: _musicIsAnnouncement, repeatMode: _musicRepeatMode, commandId: Date.now().toString() });
+      setMusicState({ trackId, filename: track.filename, command: 'play', isAnnouncement: _musicIsAnnouncement, announcementVol: _musicAnnouncementVol, repeatMode: _musicRepeatMode, commandId: Date.now().toString() });
       renderMusicTab();
     }
 
@@ -1764,9 +1773,9 @@
 
     function toggleAnnouncement() {
       _musicIsAnnouncement = !_musicIsAnnouncement;
-      const targetVol = _musicIsAnnouncement ? MUSIC_ANNOUNCEMENT_VOL : MUSIC_NORMAL_VOL;
+      const targetVol = _musicIsAnnouncement ? _musicAnnouncementVol : MUSIC_NORMAL_VOL;
       if (_musicAudio) _musicFade(_musicAudio, targetVol, MUSIC_FADE_MS);
-      setMusicState({ isAnnouncement: _musicIsAnnouncement, commandId: Date.now().toString(), command: 'announcement' });
+      setMusicState({ isAnnouncement: _musicIsAnnouncement, announcementVol: _musicAnnouncementVol, commandId: Date.now().toString(), command: 'announcement' });
       const btn = document.getElementById('musicMentBtn');
       if (btn) btn.classList.toggle('music-ment-btn--active', _musicIsAnnouncement);
       const hBtn = document.getElementById('headerMentBtn');
@@ -1775,6 +1784,14 @@
         hBtn.style.color = _musicIsAnnouncement ? '#fff' : '#374151';
         hBtn.style.borderColor = _musicIsAnnouncement ? '#4f46e5' : '#d1d5db';
       }
+    }
+
+    function onMentVolChange(val) {
+      _musicAnnouncementVol = parseInt(val) / 100;
+      localStorage.setItem('_pb_ment_vol', _musicAnnouncementVol.toString());
+      const label = document.getElementById('mentVolLabel');
+      if (label) label.textContent = val + '%';
+      if (_musicIsAnnouncement && _musicAudio) _musicFade(_musicAudio, _musicAnnouncementVol, MUSIC_FADE_MS);
     }
 
     function cycleRepeatMode() {
@@ -1893,6 +1910,12 @@
       }
       const mentBtn = document.getElementById('musicMentBtn');
       if (mentBtn) mentBtn.classList.toggle('music-ment-btn--active', _musicIsAnnouncement);
+
+      const pct = Math.round(_musicAnnouncementVol * 100);
+      const slider = document.getElementById('mentVolSlider');
+      const label = document.getElementById('mentVolLabel');
+      if (slider) slider.value = pct;
+      if (label) label.textContent = pct + '%';
     }
 
     function _roomCodeUrl(code) {

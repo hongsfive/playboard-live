@@ -260,7 +260,8 @@
       }
 
       // 'play' 또는 'announcement': 볼륨 상태 업데이트
-      const targetVol = !!st.isAnnouncement ? DISP_ANNOUNCEMENT_VOL : DISP_NORMAL_VOL;
+      const announcementVol = st.announcementVol != null ? st.announcementVol : DISP_ANNOUNCEMENT_VOL;
+      const targetVol = !!st.isAnnouncement ? announcementVol : DISP_NORMAL_VOL;
       _dispIsAnnouncement = !!st.isAnnouncement;
 
       if (st.command === 'announcement' && _dispMusicAudio) {
