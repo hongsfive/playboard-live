@@ -200,6 +200,7 @@
     let _dispLastCmdId = null;
     let _dispIsAnnouncement = false;
     let _dispRepeatMode = 'none';
+    let _dispAnnouncementVol = 0.15;
     const DISP_NORMAL_VOL = 1.0;
     const DISP_ANNOUNCEMENT_VOL = 0.15;
     const DISP_FADE_MS = 600;
@@ -220,7 +221,7 @@
 
     function _dispStartTrack(filename) {
       if (_dispMusicAudio) { _dispMusicAudio.pause(); _dispMusicAudio = null; }
-      const vol = _dispIsAnnouncement ? DISP_ANNOUNCEMENT_VOL : DISP_NORMAL_VOL;
+      const vol = _dispIsAnnouncement ? _dispAnnouncementVol : DISP_NORMAL_VOL;
       const audio = new Audio(`audio/${filename}`);
       audio.volume = vol;
       audio.play().catch(() => {});
@@ -260,8 +261,8 @@
       }
 
       // 'play' 또는 'announcement': 볼륨 상태 업데이트
-      const announcementVol = st.announcementVol != null ? st.announcementVol : DISP_ANNOUNCEMENT_VOL;
-      const targetVol = !!st.isAnnouncement ? announcementVol : DISP_NORMAL_VOL;
+      if (st.announcementVol != null) _dispAnnouncementVol = st.announcementVol;
+      const targetVol = !!st.isAnnouncement ? _dispAnnouncementVol : DISP_NORMAL_VOL;
       _dispIsAnnouncement = !!st.isAnnouncement;
 
       if (st.command === 'announcement' && _dispMusicAudio) {

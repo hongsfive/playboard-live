@@ -1647,7 +1647,8 @@
     function setMusicState(patch) {
       const st = { ...getMusicState(), ...patch };
       localStorage.setItem(App.STORAGE_KEYS.MUSIC_STATE, JSON.stringify(st));
-      window._fbSchedulePush && window._fbSchedulePush();
+      // 음악 명령은 즉시 push — 디바운스 600ms 지연 시 display.html 페이드가 눈에 띄게 늦음
+      window._fbPushNow ? window._fbPushNow() : window._fbSchedulePush && window._fbSchedulePush();
     }
 
     function _getTrackUrl(track) {
