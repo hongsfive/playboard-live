@@ -668,9 +668,9 @@ input, textarea, select { font: inherit; }
   .grid--2, .grid--3, .grid--4 { grid-template-columns: 1fr; }
   .team-bonus-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .container { padding: 12px; }
-  .app-header { padding: 12px 14px; position: sticky; top: 0; z-index: 20; }
-  .app-header h1 { font-size: 1rem; }
-  .nav-tabs { position: sticky; top: 55px; z-index: 15; }
+  .app-header { padding: 10px 14px; position: sticky; top: 0; z-index: 20; }
+  .nav-mode-bar { position: sticky; top: 48px; z-index: 19; }
+  .nav-tabs { position: sticky; top: 83px; z-index: 15; }
   .nav-tab { flex: 1; min-width: 76px; padding: 13px 10px; font-size: 0.85rem; }
   .card { padding: 14px; }
   .btn { min-height: 44px; padding: 10px 14px; font-size: 0.9rem; }

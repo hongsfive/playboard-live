@@ -407,7 +407,8 @@
         <button class="btn btn--primary btn--sm" style="flex-shrink:0;" onclick="changeRoomCode()">변경</button>
       </div>
       <div class="text-sm text-muted mt-1">영문자와 숫자 조합, 3~12자. 중복 불가.</div>
-      <div class="modal-actions" style="margin-top:16px;">
+      <div id="modalUserEmail" style="font-size:0.78rem; color:#64748b; margin-top:12px; text-align:center;"></div>
+      <div class="modal-actions" style="margin-top:8px;">
         <button class="btn btn--outline btn--sm" onclick="App.Firebase.signOut()">로그아웃</button>
         <button class="btn btn--outline" onclick="closeModal('roomCodeModal')">닫기</button>
       </div>
@@ -1793,7 +1794,7 @@
         btn.textContent = labels[_musicRepeatMode];
         btn.classList.toggle('music-repeat-btn--active', _musicRepeatMode !== 'none');
       }
-      setMusicState({ repeatMode: _musicRepeatMode });
+      setMusicState({ repeatMode: _musicRepeatMode, commandId: Date.now().toString(), command: 'repeat' });
     }
 
     function toggleMusicEditMode() {
@@ -1961,8 +1962,9 @@
         }
         localStorage.setItem('_pbauth_uid', user.uid);
         overlay.classList.add('hidden');
-        document.getElementById('headerUserEmail').textContent = user.email || user.displayName || '';
         document.getElementById('openDisplayBtn').style.display = '';
+        const _emailEl = document.getElementById('modalUserEmail');
+        if (_emailEl) _emailEl.textContent = '로그인: ' + (user.email || user.displayName || user.uid);
         App.Firebase.loadRoomCode(code => updateRoomCodeHeader(code));
         window._onFirebaseSync = function() {
           renderHeader(); renderGames(); renderRepertoire();
