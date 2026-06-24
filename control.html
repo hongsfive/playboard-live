@@ -164,7 +164,7 @@
       <div class="progress-bottom-bar__main" id="progressBottomMain">세션을 선택해 주세요</div>
       <div class="progress-bottom-bar__score" id="progressBottomScore"></div>
       <div style="display:flex; align-items:center; gap:2px; flex-shrink:0; margin-left:auto;">
-        <button id="headerMentBtn" onclick="toggleAnnouncement()" title="멘트" style="background:none; border:none; font-size:1.3rem; color:rgba(255,255,255,0.45); padding:4px 6px; cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent;">🎙</button>
+        <button id="headerMentBtn" class="progress-ment-btn" onclick="toggleAnnouncement()" title="멘트">🎙</button>
         <button onclick="stopMusic()" title="음악 정지" style="background:none; border:none; font-size:1.15rem; color:rgba(255,255,255,0.45); padding:4px 6px; cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent;">⏹</button>
       </div>
     </div>
@@ -1837,7 +1837,7 @@
       const btn = document.getElementById('musicMentBtn');
       if (btn) btn.classList.toggle('music-ment-btn--active', _musicIsAnnouncement);
       const hBtn = document.getElementById('headerMentBtn');
-      if (hBtn) hBtn.style.color = _musicIsAnnouncement ? '#a5b4fc' : 'rgba(255,255,255,0.45)';
+      if (hBtn) hBtn.classList.toggle('progress-ment-btn--active', _musicIsAnnouncement);
     }
 
     function onMentVolChange(val) {
@@ -1965,7 +1965,7 @@
       const mentBtn = document.getElementById('musicMentBtn');
       if (mentBtn) mentBtn.classList.toggle('music-ment-btn--active', _musicIsAnnouncement);
       const hBtn = document.getElementById('headerMentBtn');
-      if (hBtn) hBtn.style.color = _musicIsAnnouncement ? '#a5b4fc' : 'rgba(255,255,255,0.45)';
+      if (hBtn) hBtn.classList.toggle('progress-ment-btn--active', _musicIsAnnouncement);
 
       const pct = Math.round(_musicAnnouncementVol * 100);
       const slider = document.getElementById('mentVolSlider');

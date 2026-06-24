@@ -344,6 +344,8 @@ input, textarea, select { font: inherit; }
 }
 .progress-bottom-bar__main { font-size: 0.85rem; font-weight: 600; }
 .progress-bottom-bar__score { font-size: 0.88rem; color: rgba(255,255,255,0.9); font-weight: 700; letter-spacing: -0.01em; }
+.progress-ment-btn { background: none; border: none; font-size: 1.3rem; color: rgba(255,255,255,0.35); padding: 4px 7px; cursor: pointer; border-radius: 6px; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: color 0.15s, background 0.15s; }
+.progress-ment-btn--active { color: #a5b4fc; background: rgba(165,180,252,0.18); }
 
 /* === Record List === */
 .record-item {
