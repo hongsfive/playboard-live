@@ -226,6 +226,8 @@ const Session = {
     }
     remove(STORAGE_KEYS.SESSIONS, id);
     Record.bySession(id).forEach(r => Record.delete(r.id));
+    // 즉시 Firebase 반영 (디바운스 없이) — display.html이 stale 데이터를 보는 것 방지
+    if (window._fbPushNow) window._fbPushNow();
   },
   replaceRepertoire(sessionId, repertoireId) {
     return this.update(sessionId, { repertoireId: repertoireId || '' });
@@ -429,6 +431,14 @@ window._fbSchedulePush = function() {
   }, 600);
 };
 
+// 디바운스 없이 즉시 push (세션 삭제 등 즉각 반영이 필요한 경우)
+window._fbPushNow = function() {
+  clearTimeout(_fbPushTimer);
+  _fbPushTimer = null;
+  _fbPushPending = true;
+  Firebase.push();
+};
+
 const Firebase = {
   _db: null,
   _auth: null,
@@ -499,14 +509,17 @@ const Firebase = {
   // display.html 전용: 인증 없이 특정 uid 데이터 구독 (읽기 전용)
   watchUid(uid) {
     if (!this._db) return;
-    Object.values(STORAGE_KEYS).forEach(k => localStorage.removeItem(k));
-    localStorage.removeItem(Timer.KEY);
     this._db.ref(`users/${uid}/sb`).on('value', snap => {
       const data = snap.val();
-      if (!data) return;
-      Object.entries(data).forEach(([k, v]) => {
-        localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
-      });
+      // 매번 전체 초기화 후 재적용 — Firebase에서 삭제된 키(예: rec_active_session)가
+      // localStorage에 남아 stale 세션이 표시되는 버그 방지
+      Object.values(STORAGE_KEYS).forEach(k => localStorage.removeItem(k));
+      localStorage.removeItem(Timer.KEY);
+      if (data) {
+        Object.entries(data).forEach(([k, v]) => {
+          localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
+        });
+      }
       if (typeof window._onFirebaseSync === 'function') window._onFirebaseSync();
     });
   },
