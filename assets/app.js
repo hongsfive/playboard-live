@@ -11,6 +11,8 @@ const STORAGE_KEYS = {
   SESSIONS: 'rec_sessions',
   RECORDS: 'rec_records',
   ACTIVE_SESSION: 'rec_active_session',
+  MUSIC_TRACKS: 'rec_music_tracks',
+  MUSIC_STATE: 'rec_music_state',
 };
 
 function load(key) {
@@ -502,6 +504,78 @@ const Firebase = {
     });
   },
 
+  _genCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  },
+
+  getMyCode() {
+    return localStorage.getItem('_pb_roomcode') || null;
+  },
+
+  loadRoomCode(cb) {
+    if (!this._db || !this._uid) return;
+    const cached = this.getMyCode();
+    if (cached) { if (cb) cb(cached); return; }
+    this._db.ref(`users/${this._uid}/roomCode`).once('value', snap => {
+      const code = snap.val();
+      if (code) {
+        localStorage.setItem('_pb_roomcode', code);
+        if (cb) cb(code);
+      } else {
+        this._autoRegisterCode(cb);
+      }
+    });
+  },
+
+  _autoRegisterCode(cb, attempts) {
+    attempts = attempts || 0;
+    if (attempts > 5) return;
+    const code = this._genCode();
+    this._db.ref(`codes/${code}`).transaction(current => {
+      if (current !== null) return undefined; // taken
+      return this._uid;
+    }, (err, committed) => {
+      if (committed) {
+        this._db.ref(`users/${this._uid}/roomCode`).set(code);
+        localStorage.setItem('_pb_roomcode', code);
+        if (cb) cb(code);
+      } else {
+        this._autoRegisterCode(cb, attempts + 1);
+      }
+    });
+  },
+
+  setRoomCode(newCode, onSuccess, onError) {
+    if (!this._db || !this._uid) return;
+    newCode = newCode.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (newCode.length < 3 || newCode.length > 12) {
+      if (onError) onError('코드는 영문자·숫자 3~12자리입니다.');
+      return;
+    }
+    this._db.ref(`codes/${newCode}`).transaction(current => {
+      if (current !== null && current !== this._uid) return undefined;
+      return this._uid;
+    }, (err, committed) => {
+      if (!committed) {
+        if (onError) onError('이미 사용 중인 코드입니다.');
+        return;
+      }
+      const oldCode = this.getMyCode();
+      if (oldCode && oldCode !== newCode) {
+        this._db.ref(`codes/${oldCode}`).remove();
+      }
+      this._db.ref(`users/${this._uid}/roomCode`).set(newCode);
+      localStorage.setItem('_pb_roomcode', newCode);
+      if (onSuccess) onSuccess(newCode);
+    });
+  },
+
+  resolveCode(code, cb) {
+    if (!this._db) { cb(null); return; }
+    this._db.ref(`codes/${code.toUpperCase()}`).once('value', snap => cb(snap.val()));
+  },
+
   signInWithGoogle() {
     if (!this._auth) return Promise.reject(new Error('Auth not initialized'));
     return this._auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
@@ -519,8 +593,8 @@ const Firebase = {
     Object.values(STORAGE_KEYS).forEach(key => {
       const raw = localStorage.getItem(key);
       if (raw === null) return;
-      if (key === STORAGE_KEYS.ACTIVE_SESSION) {
-        data[key] = raw;
+      if (key === STORAGE_KEYS.ACTIVE_SESSION || key === STORAGE_KEYS.MUSIC_TRACKS) {
+        data[key] = raw; // 배열 구조 보존: Firebase object 변환 방지
       } else {
         try { data[key] = JSON.parse(raw); } catch {}
       }

@@ -31,6 +31,27 @@ input, textarea, select { font: inherit; }
 .app-header .session-info { font-size: 0.8rem; opacity: 0.7; margin-top: 2px; }
 
 /* === Navigation === */
+.nav-mode-bar {
+  display: flex;
+  background: #0f172a;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  padding: 0 8px;
+  gap: 4px;
+}
+.nav-mode-btn {
+  padding: 7px 18px;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.45);
+  font-size: 0.8rem;
+  font-weight: 500;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s;
+}
+.nav-mode-btn--active { color: #a5b4fc; border-bottom-color: #6366f1; font-weight: 700; }
+.nav-mode-btn:hover { color: rgba(255,255,255,0.8); }
+
 .nav-tabs {
   display: flex;
   background: #1e293b;
@@ -38,19 +59,21 @@ input, textarea, select { font: inherit; }
   border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 .nav-tab {
-  padding: 12px 18px;
+  padding: 13px 0;
+  flex: 1;
   background: none;
   border: none;
   color: rgba(255,255,255,0.5);
-  font-size: 0.875rem;
+  font-size: 0.9rem;
   font-weight: 500;
   white-space: nowrap;
   transition: color 0.15s;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
+  min-width: 0;
 }
 .nav-tab:hover { color: rgba(255,255,255,0.85); }
-.nav-tab.active { color: #fff; border-bottom-color: #818cf8; font-weight: 600; }
+.nav-tab.active { color: #fff; border-bottom-color: #818cf8; font-weight: 700; }
 
 /* === Cards === */
 .card {
@@ -703,3 +726,42 @@ input, textarea, select { font: inherit; }
   .btn { min-height: 40px; }
   .btn--sm { min-height: 36px; }
 }
+
+/* === Music Tab === */
+.music-controls-top { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.music-ment-btn, .music-repeat-btn {
+  flex: 1; min-height: 44px; background: #f3f4f6; border: 2px solid #d1d5db;
+  color: #374151; font-weight: 700; border-radius: 10px; cursor: pointer;
+  font-size: 0.88rem; padding: 8px 10px; transition: all 0.2s;
+}
+.music-ment-btn--active { background: #fef3c7; border-color: #f59e0b; color: #92400e; }
+.music-repeat-btn--active { background: #ede9fe; border-color: #7c3aed; color: #5b21b6; }
+.music-now-playing {
+  background: #f0fdf4; border: 1px solid #86efac; border-radius: 10px;
+  padding: 10px 14px; margin-bottom: 12px; font-size: 0.88rem;
+  color: #15803d; font-weight: 600;
+}
+.music-track-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
+.music-track-btn {
+  position: relative; background: #f8fafc; border: 2px solid #e2e8f0;
+  border-radius: 12px; padding: 12px 28px 12px 12px; cursor: pointer;
+  display: flex; flex-direction: row; align-items: center; gap: 4px; min-height: 64px;
+  transition: border-color 0.15s, background 0.15s; user-select: none;
+}
+.music-track-btn--active { background: #eef2ff; border-color: #6366f1; }
+.music-track-title { font-size: 0.92rem; font-weight: 700; color: #111827; line-height: 1.2; word-break: keep-all; }
+.music-track-btn--active .music-track-title { color: #4f46e5; }
+.music-track-artist { font-size: 0.72rem; color: #6b7280; }
+.music-track-btn--active .music-track-artist { color: #818cf8; }
+.music-track-local-badge { font-size: 0.65rem; color: #10b981; margin-top: 2px; }
+.music-track-drag { font-size: 1.1rem; color: #9ca3af; cursor: grab; padding: 0 6px 0 0; flex-shrink: 0; user-select: none; }
+.music-track-remove {
+  position: absolute; top: 4px; right: 6px; background: none; border: none;
+  font-size: 1rem; color: #9ca3af; cursor: pointer; line-height: 1; padding: 2px 4px;
+}
+.music-upload-area {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 16px; border: 2px dashed #d1d5db; border-radius: 10px; cursor: pointer;
+  color: #6b7280; transition: border-color 0.15s; text-align: center;
+}
+.music-upload-area:hover { border-color: #6366f1; color: #6366f1; }

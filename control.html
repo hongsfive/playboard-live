@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.json">
   <title>Playboard Live — 운영 화면</title>
   <link rel="stylesheet" href="assets/style.css">
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -12,18 +16,13 @@
 <body>
   <div id="app">
     <div class="app-header">
-      <div>
+      <div style="min-width:0;">
         <a href="index.html" style="font-size:0.85rem; opacity:0.7;">← 홈</a>
-        <h1 id="headerTitle">운영 화면</h1>
+        <div id="headerScore" class="session-info" style="font-size:0.82rem; opacity:0.75; margin-top:2px;"></div>
       </div>
-      <div style="text-align:right;">
-        <div class="session-info" id="headerSession">세션 미선택</div>
-        <div class="session-info" id="headerScore">세션 관리 탭에서 세션을 준비해 주세요</div>
-        <div style="margin-top:6px; display:flex; align-items:center; justify-content:flex-end; gap:6px; flex-wrap:wrap;">
-          <span id="headerUserEmail" style="font-size:0.72rem; opacity:0.6;"></span>
-          <button id="openDisplayBtn" class="btn btn--outline btn--sm" style="font-size:0.72rem; padding:2px 8px; display:none;" onclick="openDisplayScreen()">관객 화면</button>
-          <button id="signOutBtn" class="btn btn--outline btn--sm" style="font-size:0.72rem; padding:2px 8px; display:none;" onclick="App.Firebase.signOut()">로그아웃</button>
-        </div>
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; flex-shrink:0;">
+        <span id="headerRoomCode" style="display:none; font-size:0.85rem; font-weight:700; background:#eef2ff; color:#4f46e5; padding:4px 12px; border-radius:8px; cursor:pointer; letter-spacing:2px;" onclick="showRoomCodeModal()" title="방 코드 관리"></span>
+        <button id="openDisplayBtn" class="btn btn--outline btn--sm" style="display:none;" onclick="openDisplayScreen()">관객 화면</button>
       </div>
     </div>
 
@@ -37,12 +36,17 @@
     </div>
 
     <div id="mainContent">
+      <div class="nav-mode-bar">
+        <button class="nav-mode-btn" id="modeOpBtn" onclick="setNavMode('op')">▶ 운영모드</button>
+        <button class="nav-mode-btn nav-mode-btn--active" id="modeEditBtn" onclick="setNavMode('edit')">✎ 편집모드</button>
+      </div>
       <div class="nav-tabs">
-        <button class="nav-tab active" data-tab="games">게임</button>
-        <button class="nav-tab" data-tab="repertoire">레퍼토리</button>
-        <button class="nav-tab" data-tab="sessions">세션</button>
-        <button class="nav-tab" data-tab="progress">진행</button>
-        <button class="nav-tab" data-tab="records">기록</button>
+        <button class="nav-tab nav-tab--op hidden" data-tab="progress">진행</button>
+        <button class="nav-tab nav-tab--op hidden" data-tab="records">기록</button>
+        <button class="nav-tab nav-tab--op hidden" data-tab="music">음악</button>
+        <button class="nav-tab nav-tab--edit active" data-tab="games">게임</button>
+        <button class="nav-tab nav-tab--edit" data-tab="repertoire">레퍼토리</button>
+        <button class="nav-tab nav-tab--edit" data-tab="sessions">세션</button>
       </div>
 
       <div class="tab-content active" id="tab-games">
@@ -117,6 +121,36 @@
             </div>
           </div>
           <div id="recordsList"></div>
+        </div>
+      </div>
+
+      <div class="tab-content" id="tab-music">
+        <div class="container">
+          <div class="music-controls-top">
+            <button class="music-ment-btn" id="musicMentBtn" onclick="toggleAnnouncement()">🎙 멘트</button>
+            <button class="music-repeat-btn" id="musicRepeatBtn" onclick="cycleRepeatMode()">↺ 한곡반복</button>
+            <button class="btn btn--outline btn--sm" id="musicStopBtn" onclick="stopMusic()">■ 정지</button>
+          </div>
+
+          <div id="musicNowPlaying" class="music-now-playing" style="display:none;"></div>
+
+          <div class="music-track-grid" id="musicTrackGrid"></div>
+
+          <div class="music-upload-area">
+            <div style="font-weight:600; margin-bottom:8px; font-size:0.9rem;">트랙 추가</div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px;">
+              <button class="btn btn--primary btn--sm" onclick="loadMusicFromManifest()">☁ 서버 파일 불러오기</button>
+              <label class="btn btn--outline btn--sm" style="cursor:pointer;">
+                📂 기기에서 업로드
+                <input type="file" accept="audio/*" multiple style="display:none;" onchange="handleMusicFileUpload(event)">
+              </label>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:6px;">
+              <input class="form-input" id="musicFilenameInput" placeholder="파일명 직접 입력 (노래제목_가수.mp3)" style="flex:1; min-width:180px;">
+              <button class="btn btn--outline btn--sm" onclick="addTrackByFilename()">+ 추가</button>
+            </div>
+            <div class="text-sm text-muted">업로드 파일은 이 기기에서만 재생. 서버 파일은 모든 기기 공유.</div>
+          </div>
         </div>
       </div>
     </div>
@@ -284,12 +318,16 @@
       <div class="modal-title">레퍼토리에 게임 추가</div>
       <input type="hidden" id="repItemTargetRepertoireId">
       <div class="form-group">
-        <label class="form-label">게임 선택</label>
-        <select class="form-select" id="repItemGameSelect"></select>
+        <label class="form-label">게임 선택 <span id="repItemSelectedCount" style="font-weight:400; color:#6366f1;"></span></label>
+        <div style="display:flex; gap:6px; margin-bottom:6px;">
+          <input class="form-input form-input--sm" id="repItemSearch" placeholder="검색..." oninput="renderRepItemGameList()" style="flex:1;">
+          <button class="btn btn--outline btn--sm" onclick="toggleSelectAllRepGames()">전체선택</button>
+        </div>
+        <div id="repItemGameList" style="max-height:220px; overflow-y:auto; border:1px solid #e2e8f0; border-radius:8px; padding:4px;"></div>
       </div>
       <div class="grid grid--2">
         <div class="form-group">
-          <label class="form-label">배점</label>
+          <label class="form-label">기본 배점</label>
           <input class="form-input" type="number" id="repItemPoints" value="10">
         </div>
         <div class="form-group">
@@ -350,6 +388,29 @@
       <button class="btn btn--primary btn--block" onclick="App.Firebase.signInWithGoogle().catch(e => showToast(e.message, 'error'))">
         Google로 로그인
       </button>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="roomCodeModal">
+    <div class="modal" style="max-width:360px;">
+      <div class="modal-title">관객 화면 접속 코드</div>
+      <div style="text-align:center; margin:16px 0;">
+        <div id="roomCodeDisplay" style="font-size:2.2rem; font-weight:900; letter-spacing:6px; color:#4f46e5; background:#eef2ff; border-radius:12px; padding:16px;"></div>
+        <div class="text-sm text-muted mt-2">관객 화면 주소</div>
+        <div id="roomCodeUrl" style="font-size:0.78rem; color:#6366f1; word-break:break-all; margin:6px 0 12px;"></div>
+        <button class="btn btn--primary btn--sm" onclick="copyRoomCodeUrl()">링크 복사</button>
+      </div>
+      <hr style="border:none; border-top:1px solid #e2e8f0; margin:12px 0;">
+      <div style="font-size:0.85rem; font-weight:600; margin-bottom:8px;">코드 변경</div>
+      <div style="display:flex; gap:8px;">
+        <input class="form-input" id="roomCodeNewInput" placeholder="새 코드 (영문·숫자 3~12자)" style="text-transform:uppercase; letter-spacing:2px;" maxlength="12">
+        <button class="btn btn--primary btn--sm" style="flex-shrink:0;" onclick="changeRoomCode()">변경</button>
+      </div>
+      <div class="text-sm text-muted mt-1">영문자와 숫자 조합, 3~12자. 중복 불가.</div>
+      <div class="modal-actions" style="margin-top:16px;">
+        <button class="btn btn--outline btn--sm" onclick="App.Firebase.signOut()">로그아웃</button>
+        <button class="btn btn--outline" onclick="closeModal('roomCodeModal')">닫기</button>
+      </div>
     </div>
   </div>
 
@@ -441,34 +502,37 @@
 
     function renderHeader() {
       const s = getActiveSession();
-      const warning = document.getElementById('noSessionWarning');
-      const main = document.getElementById('mainContent');
-      main.style.display = 'block';
-
-      if (!s) {
-        warning.style.display = 'block';
-        document.getElementById('headerSession').textContent = '세션 미선택 · 준비 모드';
-        document.getElementById('headerScore').textContent = '세션 관리 탭에서 세션을 만들거나 활성화해 주세요';
-        document.getElementById('headerTitle').textContent = '운영 화면';
-        return;
+      document.getElementById('noSessionWarning').style.display = s ? 'none' : 'block';
+      document.getElementById('mainContent').style.display = 'block';
+      if (s) {
+        const scores = App.Session.getScores(s.id);
+        document.getElementById('headerScore').textContent =
+          `${s.title}  ·  ${s.leftTeamName} ${scores.leftTotal} : ${scores.rightTotal} ${s.rightTeamName}`;
+      } else {
+        document.getElementById('headerScore').textContent = '세션 없음 — 세션 탭에서 활성화해 주세요';
       }
-
-      warning.style.display = 'none';
-      document.getElementById('headerSession').textContent = s.title;
-      document.getElementById('headerTitle').textContent = s.title;
-      const scores = App.Session.getScores(s.id);
-      document.getElementById('headerScore').textContent = `${s.leftTeamName} ${scores.leftTotal} : ${scores.rightTotal} ${s.rightTeamName}`;
     }
 
     document.querySelectorAll('.nav-tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        activateTab(tab.dataset.tab);
-      });
+      tab.addEventListener('click', () => activateTab(tab.dataset.tab));
     });
 
+    const _opTabs = ['progress', 'records', 'music'];
+    const _editTabs = ['games', 'repertoire', 'sessions'];
+
+    function setNavMode(mode) {
+      const isOp = mode === 'op';
+      document.getElementById('modeOpBtn').classList.toggle('nav-mode-btn--active', isOp);
+      document.getElementById('modeEditBtn').classList.toggle('nav-mode-btn--active', !isOp);
+      document.querySelectorAll('.nav-tab--op').forEach(t => t.classList.toggle('hidden', !isOp));
+      document.querySelectorAll('.nav-tab--edit').forEach(t => t.classList.toggle('hidden', isOp));
+    }
+
     function activateTab(tabName) {
-      const allowed = ['games', 'repertoire', 'sessions', 'progress', 'records'];
+      const allowed = ['games', 'repertoire', 'sessions', 'progress', 'records', 'music'];
       const target = allowed.includes(tabName) ? tabName : 'games';
+      if (_opTabs.includes(target)) setNavMode('op');
+      if (_editTabs.includes(target)) setNavMode('edit');
       document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === target));
       document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === 'tab-' + target));
       renderTab(target);
@@ -481,6 +545,7 @@
         case 'sessions': renderSessions(); break;
         case 'progress': renderProgress(); break;
         case 'records': renderRecords(); break;
+        case 'music': renderMusicTab(); break;
       }
     }
 
@@ -700,21 +765,41 @@
       if (!repertoireId) { showToast('먼저 레퍼토리를 선택해 주세요.', 'error'); return; }
       const games = App.Game.all();
       if (games.length === 0) { showToast('먼저 게임 탭에서 게임을 추가해 주세요.', 'error'); return; }
-      const select = document.getElementById('repItemGameSelect');
       document.getElementById('repItemTargetRepertoireId').value = repertoireId;
-      select.innerHTML = games.map(g => `<option value="${g.id}">${g.name} (${g.scoringMode === 'per_question' ? `문제당 ${g.defaultPointsPerQuestion || g.defaultPoints}점` : `${g.defaultPoints}점`})</option>`).join('');
-      if (games.length > 0) {
-        document.getElementById('repItemPoints').value = games[0].scoringMode === 'per_question' ? (games[0].defaultPointsPerQuestion || games[0].defaultPoints) : games[0].defaultPoints;
-        document.getElementById('repItemMinutes').value = games[0].estimatedMinutes;
-      }
-      select.onchange = () => {
-        const g = App.Game.byId(select.value);
-        if (g) {
-          document.getElementById('repItemPoints').value = g.scoringMode === 'per_question' ? (g.defaultPointsPerQuestion || g.defaultPoints) : g.defaultPoints;
-          document.getElementById('repItemMinutes').value = g.estimatedMinutes;
-        }
-      };
+      document.getElementById('repItemSearch').value = '';
+      document.getElementById('repItemPoints').value = 10;
+      document.getElementById('repItemMinutes').value = 10;
+      renderRepItemGameList();
       document.getElementById('addRepItemModal').classList.remove('hidden');
+    }
+
+    function renderRepItemGameList() {
+      const query = (document.getElementById('repItemSearch').value || '').toLowerCase();
+      const games = App.Game.all().filter(g => !query || g.name.toLowerCase().includes(query) || (g.category || '').toLowerCase().includes(query));
+      const list = document.getElementById('repItemGameList');
+      const checked = new Set(Array.from(list.querySelectorAll('input[type=checkbox]:checked')).map(el => el.value));
+      list.innerHTML = games.map(g => {
+        const pts = g.scoringMode === 'per_question' ? `문제당 ${g.defaultPointsPerQuestion || g.defaultPoints}점` : `${g.defaultPoints}점`;
+        const isChecked = checked.has(g.id) ? 'checked' : '';
+        return `<label style="display:flex; align-items:center; gap:8px; padding:7px 8px; border-radius:6px; cursor:pointer; hover:background:#f1f5f9;">
+          <input type="checkbox" value="${g.id}" ${isChecked} onchange="updateRepItemCount()">
+          <span style="flex:1; font-size:0.88rem;">${g.name}</span>
+          <span style="font-size:0.75rem; color:#6b7280;">${g.category ? g.category + ' · ' : ''}${pts}</span>
+        </label>`;
+      }).join('');
+      updateRepItemCount();
+    }
+
+    function updateRepItemCount() {
+      const count = document.getElementById('repItemGameList').querySelectorAll('input:checked').length;
+      document.getElementById('repItemSelectedCount').textContent = count > 0 ? `${count}개 선택` : '';
+    }
+
+    function toggleSelectAllRepGames() {
+      const checkboxes = document.getElementById('repItemGameList').querySelectorAll('input[type=checkbox]');
+      const allChecked = Array.from(checkboxes).every(c => c.checked);
+      checkboxes.forEach(c => { c.checked = !allChecked; });
+      updateRepItemCount();
     }
 
     function showAddGameToRepertoire() {
@@ -730,11 +815,13 @@
     function addGameToRepertoire() {
       const repertoireId = document.getElementById('repItemTargetRepertoireId').value;
       if (!repertoireId) return;
-      const gameId = document.getElementById('repItemGameSelect').value;
-      App.Repertoire.addItem(repertoireId, gameId, {
+      const checked = Array.from(document.getElementById('repItemGameList').querySelectorAll('input:checked')).map(el => el.value);
+      if (checked.length === 0) { showToast('게임을 하나 이상 선택해 주세요.', 'error'); return; }
+      const opts = {
         customPoints: Number(document.getElementById('repItemPoints').value) || 10,
         customEstimatedMinutes: Number(document.getElementById('repItemMinutes').value) || 10,
-      });
+      };
+      checked.forEach(gameId => App.Repertoire.addItem(repertoireId, gameId, opts));
       closeModal('addRepItemModal');
       renderRepertoire();
       renderProgress();
@@ -1509,10 +1596,359 @@
       _updateTimerBar();
     }
 
+    // === Music Player ===
+    const _musicObjectUrls = {};
+    let _musicAudio = null;
+    let _musicCurrentTrackId = null;
+    let _musicIsAnnouncement = false;
+    let _musicRepeatMode = 'one';
+    let _musicEditMode = false;
+    const MUSIC_NORMAL_VOL = 1.0;
+    const MUSIC_ANNOUNCEMENT_VOL = 0.15;
+    const MUSIC_FADE_MS = 600;
+
+    function _musicFade(audio, targetVol, ms, cb) {
+      const startVol = audio.volume;
+      const diff = targetVol - startVol;
+      if (Math.abs(diff) < 0.001) { audio.volume = targetVol; if (cb) cb(); return; }
+      const startTime = performance.now();
+      function step(now) {
+        const t = Math.min((now - startTime) / ms, 1);
+        audio.volume = Math.max(0, Math.min(1, startVol + diff * t));
+        if (t < 1) requestAnimationFrame(step);
+        else if (cb) cb();
+      }
+      requestAnimationFrame(step);
+    }
+
+    function parseMusicFilename(filename) {
+      const base = filename.replace(/\.[^.]+$/, '');
+      const lastUnderscore = base.lastIndexOf('_');
+      if (lastUnderscore > 0) {
+        return { title: base.slice(0, lastUnderscore), artist: base.slice(lastUnderscore + 1) };
+      }
+      return { title: base, artist: '' };
+    }
+
+    function getMusicTracks() {
+      return JSON.parse(localStorage.getItem(App.STORAGE_KEYS.MUSIC_TRACKS) || '[]');
+    }
+    function saveMusicTracks(tracks) {
+      localStorage.setItem(App.STORAGE_KEYS.MUSIC_TRACKS, JSON.stringify(tracks));
+      window._fbSchedulePush && window._fbSchedulePush();
+    }
+    function getMusicState() {
+      return JSON.parse(localStorage.getItem(App.STORAGE_KEYS.MUSIC_STATE) || '{}');
+    }
+    function setMusicState(patch) {
+      const st = { ...getMusicState(), ...patch };
+      localStorage.setItem(App.STORAGE_KEYS.MUSIC_STATE, JSON.stringify(st));
+      window._fbSchedulePush && window._fbSchedulePush();
+    }
+
+    function _getTrackUrl(track) {
+      if (_musicObjectUrls[track.id]) return _musicObjectUrls[track.id];
+      return `audio/${track.filename}`;
+    }
+
+    function handleMusicFileUpload(e) {
+      const files = Array.from(e.target.files);
+      const tracks = getMusicTracks();
+      files.forEach(file => {
+        const id = 'tr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+        const url = URL.createObjectURL(file);
+        _musicObjectUrls[id] = url;
+        tracks.push({ id, filename: file.name, local: true });
+      });
+      saveMusicTracks(tracks);
+      renderMusicTab();
+      e.target.value = '';
+    }
+
+    function loadMusicFromManifest() {
+      fetch('audio/manifest.json')
+        .then(r => r.json())
+        .then(files => {
+          const tracks = getMusicTracks();
+          const existingFilenames = new Set(tracks.map(t => t.filename));
+          let added = 0;
+          files.forEach(entry => {
+            const filename = typeof entry === 'string' ? entry : entry.filename;
+            if (!existingFilenames.has(filename)) {
+              const id = 'tr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+              const track = { id, filename, local: false };
+              if (typeof entry === 'object') {
+                if (entry.title) track.title = entry.title;
+                if (entry.artist) track.artist = entry.artist;
+              }
+              tracks.push(track);
+              added++;
+            }
+          });
+          if (added > 0) {
+            saveMusicTracks(tracks);
+            renderMusicTab();
+            showToast(`${added}개 트랙이 추가됐습니다.`);
+          } else {
+            showToast('새로 추가할 파일이 없습니다.');
+          }
+        })
+        .catch(() => showToast('서버 파일 목록을 불러올 수 없습니다.', 'error'));
+    }
+
+    function addTrackByFilename() {
+      const input = document.getElementById('musicFilenameInput');
+      const filename = input.value.trim();
+      if (!filename) return;
+      const tracks = getMusicTracks();
+      const id = 'tr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+      tracks.push({ id, filename: filename.endsWith('.mp3') ? filename : filename + '.mp3', local: false });
+      saveMusicTracks(tracks);
+      renderMusicTab();
+      input.value = '';
+    }
+
+    function removeMusicTrack(id) {
+      if (_musicCurrentTrackId === id) stopMusic();
+      if (_musicObjectUrls[id]) { URL.revokeObjectURL(_musicObjectUrls[id]); delete _musicObjectUrls[id]; }
+      const tracks = getMusicTracks().filter(t => t.id !== id);
+      saveMusicTracks(tracks);
+      renderMusicTab();
+    }
+
+    function playTrack(trackId) {
+      const tracks = getMusicTracks();
+      const track = tracks.find(t => t.id === trackId);
+      if (!track) return;
+
+      const url = _getTrackUrl(track);
+      const isSameTrack = _musicCurrentTrackId === trackId && _musicAudio && !_musicAudio.paused;
+
+      if (isSameTrack) {
+        _musicAudio.pause();
+        _musicCurrentTrackId = null;
+        setMusicState({ trackId, filename: track.filename, command: 'stop', commandId: Date.now().toString() });
+        renderMusicTab();
+        return;
+      }
+
+      if (_musicAudio) { _musicAudio.pause(); _musicAudio.src = ''; }
+
+      _musicAudio = new Audio(url);
+      _musicAudio.preload = 'auto';
+      _musicAudio.volume = _musicIsAnnouncement ? MUSIC_ANNOUNCEMENT_VOL : MUSIC_NORMAL_VOL;
+      _musicAudio.play().catch(err => showToast('재생 오류: ' + err.message, 'error'));
+      _musicAudio.addEventListener('ended', _onMusicEnded);
+      _musicCurrentTrackId = trackId;
+
+      setMusicState({ trackId, filename: track.filename, command: 'play', isAnnouncement: _musicIsAnnouncement, repeatMode: _musicRepeatMode, commandId: Date.now().toString() });
+      renderMusicTab();
+    }
+
+    function _onMusicEnded() {
+      if (_musicRepeatMode === 'one') {
+        if (_musicAudio) { _musicAudio.currentTime = 0; _musicAudio.play().catch(() => {}); }
+        return;
+      }
+      if (_musicRepeatMode === 'all') {
+        const tracks = getMusicTracks();
+        if (!tracks.length) return;
+        const idx = tracks.findIndex(t => t.id === _musicCurrentTrackId);
+        const nextTrack = tracks[(idx + 1) % tracks.length];
+        playTrack(nextTrack.id);
+        return;
+      }
+      // 'none': stop
+      _musicCurrentTrackId = null;
+      setMusicState({ command: 'stop', commandId: Date.now().toString() });
+      renderMusicTab();
+    }
+
+    function stopMusic() {
+      if (!_musicAudio) return;
+      _musicFade(_musicAudio, 0, MUSIC_FADE_MS, () => {
+        if (_musicAudio) { _musicAudio.pause(); _musicAudio.src = ''; _musicAudio = null; }
+      });
+      _musicCurrentTrackId = null;
+      setMusicState({ command: 'stop', commandId: Date.now().toString() });
+      renderMusicTab();
+    }
+
+    function toggleAnnouncement() {
+      _musicIsAnnouncement = !_musicIsAnnouncement;
+      const targetVol = _musicIsAnnouncement ? MUSIC_ANNOUNCEMENT_VOL : MUSIC_NORMAL_VOL;
+      if (_musicAudio) _musicFade(_musicAudio, targetVol, MUSIC_FADE_MS);
+      setMusicState({ isAnnouncement: _musicIsAnnouncement, commandId: Date.now().toString(), command: 'announcement' });
+      const btn = document.getElementById('musicMentBtn');
+      if (btn) btn.classList.toggle('music-ment-btn--active', _musicIsAnnouncement);
+    }
+
+    function cycleRepeatMode() {
+      const modes = ['one', 'all', 'none'];
+      const idx = modes.indexOf(_musicRepeatMode);
+      _musicRepeatMode = modes[(idx + 1) % modes.length];
+      const labels = { one: '↺ 한곡반복', all: '↻ 전체반복', none: '→ 한번만' };
+      const btn = document.getElementById('musicRepeatBtn');
+      if (btn) {
+        btn.textContent = labels[_musicRepeatMode];
+        btn.classList.toggle('music-repeat-btn--active', _musicRepeatMode !== 'none');
+      }
+      setMusicState({ repeatMode: _musicRepeatMode });
+    }
+
+    function toggleMusicEditMode() {
+      _musicEditMode = !_musicEditMode;
+      renderMusicTab();
+    }
+
+    function renderMusicTab() {
+      const grid = document.getElementById('musicTrackGrid');
+      const nowPlaying = document.getElementById('musicNowPlaying');
+      if (!grid) return;
+
+      const tracks = getMusicTracks();
+      grid.innerHTML = '';
+
+      let _dragSrcId = null;
+
+      tracks.forEach(track => {
+        const parsed = parseMusicFilename(track.filename);
+        const title = track.title || parsed.title;
+        const artist = track.artist !== undefined ? track.artist : parsed.artist;
+        const isActive = track.id === _musicCurrentTrackId && _musicAudio && !_musicAudio.paused;
+        const btn = document.createElement('div');
+        btn.className = 'music-track-btn' + (isActive ? ' music-track-btn--active' : '');
+        btn.dataset.trackId = track.id;
+
+        if (_musicEditMode) {
+          btn.draggable = true;
+          btn.innerHTML = `
+            <span class="music-track-drag">⠿</span>
+            <div style="flex:1; min-width:0;">
+              <div class="music-track-title">${title}</div>
+              ${artist ? `<div class="music-track-artist">${artist}</div>` : ''}
+            </div>
+            ${track.local ? '<div class="music-track-local-badge">기기</div>' : ''}
+            <button class="music-track-remove" onclick="event.stopPropagation();removeMusicTrack('${track.id}')">✕</button>
+          `;
+          btn.addEventListener('dragstart', e => {
+            _dragSrcId = track.id;
+            e.dataTransfer.effectAllowed = 'move';
+            btn.style.opacity = '0.5';
+          });
+          btn.addEventListener('dragend', () => { btn.style.opacity = ''; });
+          btn.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; });
+          btn.addEventListener('drop', e => {
+            e.preventDefault();
+            if (_dragSrcId && _dragSrcId !== track.id) {
+              const ts = getMusicTracks();
+              const srcIdx = ts.findIndex(t => t.id === _dragSrcId);
+              const dstIdx = ts.findIndex(t => t.id === track.id);
+              const [moved] = ts.splice(srcIdx, 1);
+              ts.splice(dstIdx, 0, moved);
+              saveMusicTracks(ts);
+              renderMusicTab();
+            }
+          });
+        } else {
+          btn.innerHTML = `
+            <div style="flex:1; min-width:0;">
+              <div class="music-track-title">${title}</div>
+              ${artist ? `<div class="music-track-artist">${artist}</div>` : ''}
+            </div>
+            ${track.local ? '<div class="music-track-local-badge">기기</div>' : ''}
+          `;
+          btn.addEventListener('click', () => playTrack(track.id));
+        }
+
+        grid.appendChild(btn);
+      });
+
+      if (tracks.length === 0) {
+        grid.innerHTML = '<div class="text-sm text-muted" style="padding:16px 0;">트랙을 추가해 주세요.</div>';
+      }
+
+      // 편집 버튼
+      const editBtn = document.createElement('button');
+      editBtn.className = _musicEditMode ? 'btn btn--primary btn--sm' : 'btn btn--outline btn--sm';
+      editBtn.style.cssText = 'margin-top:10px; width:100%;';
+      editBtn.textContent = _musicEditMode ? '✓ 편집 완료' : '✎ 순서·삭제 편집';
+      editBtn.onclick = toggleMusicEditMode;
+      grid.appendChild(editBtn);
+
+      // Now playing bar
+      if (_musicCurrentTrackId && _musicAudio && !_musicAudio.paused) {
+        const t = tracks.find(t => t.id === _musicCurrentTrackId);
+        if (t) {
+          const p = parseMusicFilename(t.filename);
+          const tTitle = t.title || p.title;
+          const tArtist = t.artist !== undefined ? t.artist : p.artist;
+          nowPlaying.style.display = 'block';
+          nowPlaying.textContent = `▶ ${tTitle}${tArtist ? ' · ' + tArtist : ''}${_musicIsAnnouncement ? ' 🎙' : ''}`;
+        }
+      } else {
+        nowPlaying.style.display = 'none';
+      }
+
+      // Repeat btn label sync
+      const repeatBtn = document.getElementById('musicRepeatBtn');
+      const labels = { one: '↺ 한곡반복', all: '↻ 전체반복', none: '→ 한번만' };
+      if (repeatBtn) {
+        repeatBtn.textContent = labels[_musicRepeatMode];
+        repeatBtn.classList.toggle('music-repeat-btn--active', _musicRepeatMode !== 'none');
+      }
+      const mentBtn = document.getElementById('musicMentBtn');
+      if (mentBtn) mentBtn.classList.toggle('music-ment-btn--active', _musicIsAnnouncement);
+    }
+
+    function _roomCodeUrl(code) {
+      return `${location.origin}${location.pathname.replace('control.html', '')}display.html?code=${code}`;
+    }
+
+    function updateRoomCodeHeader(code) {
+      const el = document.getElementById('headerRoomCode');
+      if (!el) return;
+      if (code) { el.textContent = code; el.style.display = ''; }
+      else el.style.display = 'none';
+    }
+
+    function showRoomCodeModal() {
+      const code = App.Firebase.getMyCode();
+      if (!code) { showToast('방 코드를 불러오는 중...'); return; }
+      document.getElementById('roomCodeDisplay').textContent = code;
+      document.getElementById('roomCodeUrl').textContent = _roomCodeUrl(code);
+      document.getElementById('roomCodeNewInput').value = '';
+      document.getElementById('roomCodeModal').classList.remove('hidden');
+    }
+
+    function copyRoomCodeUrl() {
+      const code = App.Firebase.getMyCode();
+      if (!code) return;
+      navigator.clipboard.writeText(_roomCodeUrl(code)).then(() => showToast('링크 복사됨'));
+    }
+
+    function changeRoomCode() {
+      const input = document.getElementById('roomCodeNewInput');
+      const newCode = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (newCode.length < 3) { showToast('3자리 이상 입력해 주세요.', 'error'); return; }
+      App.Firebase.setRoomCode(newCode,
+        code => {
+          updateRoomCodeHeader(code);
+          document.getElementById('roomCodeDisplay').textContent = code;
+          document.getElementById('roomCodeUrl').textContent = _roomCodeUrl(code);
+          input.value = '';
+          showToast(`코드가 "${code}"로 변경됐습니다.`);
+        },
+        msg => showToast(msg, 'error')
+      );
+    }
+
     function openDisplayScreen() {
+      const code = App.Firebase.getMyCode();
       const uid = App.Firebase._uid;
       if (!uid) { showToast('로그인 후 이용하세요.', 'error'); return; }
-      window.open(`display.html?uid=${uid}`, '_blank');
+      const url = code ? _roomCodeUrl(code) : `display.html?uid=${uid}`;
+      window.open(url, '_blank');
     }
 
     window._onAuthStateChange = function(user) {
@@ -1526,20 +1962,22 @@
         localStorage.setItem('_pbauth_uid', user.uid);
         overlay.classList.add('hidden');
         document.getElementById('headerUserEmail').textContent = user.email || user.displayName || '';
-        document.getElementById('signOutBtn').style.display = '';
         document.getElementById('openDisplayBtn').style.display = '';
+        App.Firebase.loadRoomCode(code => updateRoomCodeHeader(code));
         window._onFirebaseSync = function() {
           renderHeader(); renderGames(); renderRepertoire();
           renderSessions(); renderProgress(); renderRecords();
+          renderMusicTab();
         };
         App.Firebase.startListening();
         renderHeader();
-        activateTab(new URLSearchParams(location.search).get('tab') || 'games');
+        const _initTab = new URLSearchParams(location.search).get('tab')
+          || (App.Session.getActive() ? 'progress' : 'games');
+        activateTab(_initTab);
       } else {
         overlay.classList.remove('hidden');
-        document.getElementById('headerUserEmail').textContent = '';
-        document.getElementById('signOutBtn').style.display = 'none';
         document.getElementById('openDisplayBtn').style.display = 'none';
+        document.getElementById('headerRoomCode').style.display = 'none';
       }
     };
   </script>
