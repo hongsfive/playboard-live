@@ -19,10 +19,10 @@
       <div style="min-width:0;">
         <a href="index.html" style="font-size:0.85rem; opacity:0.7;">← 홈</a>
       </div>
-      <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
-        <button id="headerMentBtn" onclick="toggleAnnouncement()" style="min-height:36px; padding:4px 10px; font-size:0.82rem; font-weight:700; border-radius:8px; cursor:pointer; border:2px solid #d1d5db; background:#f3f4f6; color:#374151; touch-action:manipulation; -webkit-tap-highlight-color:transparent;">🎙 멘트</button>
-        <button onclick="stopMusic()" style="min-height:36px; padding:4px 10px; font-size:0.82rem; font-weight:700; border-radius:8px; cursor:pointer; border:2px solid #d1d5db; background:#f3f4f6; color:#374151; touch-action:manipulation; -webkit-tap-highlight-color:transparent;">■ 정지</button>
-        <span id="headerRoomCode" style="display:none; font-size:0.85rem; font-weight:700; background:#eef2ff; color:#4f46e5; padding:4px 12px; border-radius:8px; cursor:pointer; letter-spacing:2px;" onclick="showRoomCodeModal()" title="방 코드 관리"></span>
+      <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+        <button class="nav-mode-btn" id="modeOpBtn" onclick="setNavMode('op')" style="border-bottom:none; border-radius:6px; padding:5px 12px;">▶ 운영</button>
+        <button class="nav-mode-btn nav-mode-btn--active" id="modeEditBtn" onclick="setNavMode('edit')" style="border-bottom:none; border-radius:6px; padding:5px 12px;">✎ 편집</button>
+        <span id="headerRoomCode" style="display:none; font-size:0.85rem; font-weight:700; background:#eef2ff; color:#4f46e5; padding:4px 12px; border-radius:8px; cursor:pointer; letter-spacing:2px; margin-left:4px;" onclick="showRoomCodeModal()" title="방 코드 관리"></span>
       </div>
     </div>
 
@@ -36,10 +36,6 @@
     </div>
 
     <div id="mainContent">
-      <div class="nav-mode-bar">
-        <button class="nav-mode-btn" id="modeOpBtn" onclick="setNavMode('op')">▶ 운영모드</button>
-        <button class="nav-mode-btn nav-mode-btn--active" id="modeEditBtn" onclick="setNavMode('edit')">✎ 편집모드</button>
-      </div>
       <div class="nav-tabs">
         <button class="nav-tab nav-tab--op hidden" data-tab="progress">진행</button>
         <button class="nav-tab nav-tab--op hidden" data-tab="records">기록</button>
@@ -171,6 +167,9 @@
   </div>
 
   <div id="timerBar" class="timer-bar">
+    <button id="headerMentBtn" onclick="toggleAnnouncement()" title="멘트" style="background:none; border:none; font-size:1.25rem; color:rgba(255,255,255,0.45); padding:2px 4px; cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent; flex-shrink:0;">🎙</button>
+    <button onclick="stopMusic()" title="음악 정지" style="background:none; border:none; font-size:1.1rem; color:rgba(255,255,255,0.45); padding:2px 4px; cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent; flex-shrink:0;">⏹</button>
+    <div style="width:1px; height:18px; background:rgba(255,255,255,0.15); flex-shrink:0; margin:0 2px;"></div>
     <div id="timerCount" class="timer-count">⏱</div>
     <div class="timer-presets">
       <button class="timer-preset-btn" onclick="startTimer(30)">30초</button>
@@ -374,6 +373,20 @@
       <div class="modal-actions">
         <button class="btn btn--outline" onclick="closeModal('editRecordModal')">취소</button>
         <button class="btn btn--primary" onclick="saveRecordEdit()">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="bonusModal">
+    <div class="modal" style="max-width:280px;">
+      <div class="modal-title" id="bonusModalTitle">보너스 점수</div>
+      <div class="form-group">
+        <input class="form-input" id="bonusModalInput" type="number" min="1" placeholder="점수 입력"
+          onkeydown="if(event.key==='Enter')applyBonusModal()" style="font-size:1.2rem; text-align:center;">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn--outline" onclick="closeBonusModal()">취소</button>
+        <button class="btn btn--primary" onclick="applyBonusModal()">적용</button>
       </div>
     </div>
   </div>
@@ -1064,16 +1077,14 @@
               <button class="btn btn--success btn--sm" onclick="recordBonus('${item.id}', 10, 'left')">+10</button>
               <button class="btn btn--success btn--sm" onclick="recordBonus('${item.id}', 20, 'left')">+20</button>
               <button class="btn btn--success btn--sm" onclick="recordBonus('${item.id}', 30, 'left')">+30</button>
-              <input class="form-input cg-bonus-custom" type="number" id="bonus-custom-left-${item.id}" placeholder="직접" min="1">
-              <button class="btn btn--success btn--sm" onclick="recordCustomBonus('${item.id}', 'left')">적용</button>
+              <button class="btn btn--success btn--sm" onclick="showBonusModal('${item.id}', 'left')">+n</button>
             </div>
             <div class="cg-bonus-row">
               <span class="cg-bonus-label right">${rName}</span>
               <button class="btn btn--danger btn--sm" onclick="recordBonus('${item.id}', 10, 'right')">+10</button>
               <button class="btn btn--danger btn--sm" onclick="recordBonus('${item.id}', 20, 'right')">+20</button>
               <button class="btn btn--danger btn--sm" onclick="recordBonus('${item.id}', 30, 'right')">+30</button>
-              <input class="form-input cg-bonus-custom" type="number" id="bonus-custom-right-${item.id}" placeholder="직접" min="1">
-              <button class="btn btn--danger btn--sm" onclick="recordCustomBonus('${item.id}', 'right')">적용</button>
+              <button class="btn btn--danger btn--sm" onclick="showBonusModal('${item.id}', 'right')">+n</button>
             </div>
           </div>
           <div class="cg-end-row">
@@ -1203,12 +1214,26 @@
       renderRecords();
     }
 
-    function recordCustomBonus(itemId, side) {
-      const input = document.getElementById(`bonus-custom-${side}-${itemId}`);
-      const pts = Number(input?.value) || 0;
-      if (pts <= 0) { showToast('보너스 점수를 입력해 주세요.', 'error'); return; }
-      recordBonus(itemId, pts, side);
-      if (input) input.value = '';
+    let _bonusModalItemId = null, _bonusModalSide = null;
+    function showBonusModal(itemId, side) {
+      _bonusModalItemId = itemId; _bonusModalSide = side;
+      const s = getActiveSession();
+      const name = side === 'left' ? s?.leftTeamName : s?.rightTeamName;
+      document.getElementById('bonusModalTitle').textContent = `${name || ''} 보너스 점수`;
+      const inp = document.getElementById('bonusModalInput');
+      inp.value = '';
+      document.getElementById('bonusModal').classList.remove('hidden');
+      setTimeout(() => inp.focus(), 80);
+    }
+    function closeBonusModal() {
+      document.getElementById('bonusModal').classList.add('hidden');
+      _bonusModalItemId = null; _bonusModalSide = null;
+    }
+    function applyBonusModal() {
+      const pts = parseInt(document.getElementById('bonusModalInput').value);
+      if (isNaN(pts) || pts <= 0) { showToast('점수를 입력해 주세요.', 'error'); return; }
+      recordBonus(_bonusModalItemId, pts, _bonusModalSide);
+      closeBonusModal();
     }
 
     function showSessionSummary() {
@@ -1811,11 +1836,7 @@
       const btn = document.getElementById('musicMentBtn');
       if (btn) btn.classList.toggle('music-ment-btn--active', _musicIsAnnouncement);
       const hBtn = document.getElementById('headerMentBtn');
-      if (hBtn) {
-        hBtn.style.background = _musicIsAnnouncement ? '#4f46e5' : '#f3f4f6';
-        hBtn.style.color = _musicIsAnnouncement ? '#fff' : '#374151';
-        hBtn.style.borderColor = _musicIsAnnouncement ? '#4f46e5' : '#d1d5db';
-      }
+      if (hBtn) hBtn.style.color = _musicIsAnnouncement ? '#a5b4fc' : 'rgba(255,255,255,0.45)';
     }
 
     function onMentVolChange(val) {
@@ -1942,6 +1963,8 @@
       }
       const mentBtn = document.getElementById('musicMentBtn');
       if (mentBtn) mentBtn.classList.toggle('music-ment-btn--active', _musicIsAnnouncement);
+      const hBtn = document.getElementById('headerMentBtn');
+      if (hBtn) hBtn.style.color = _musicIsAnnouncement ? '#a5b4fc' : 'rgba(255,255,255,0.45)';
 
       const pct = Math.round(_musicAnnouncementVol * 100);
       const slider = document.getElementById('mentVolSlider');
