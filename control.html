@@ -1603,6 +1603,7 @@
     // === Music Player ===
     const _musicObjectUrls = {};
     let _musicAudio = null;
+    let _musicNowPlayingTimer = null;
     let _musicCurrentTrackId = null;
     let _musicIsAnnouncement = false;
     let _musicRepeatMode = 'one';
@@ -1670,26 +1671,52 @@
       e.target.value = '';
     }
 
+    function _updateMusicTime() {
+      const el = document.getElementById('musicTimeRemaining');
+      if (!el || !_musicAudio || _musicAudio.paused) return;
+      const remaining = _musicAudio.duration - _musicAudio.currentTime;
+      if (!isFinite(remaining) || remaining < 0) { el.textContent = ''; return; }
+      const s = Math.ceil(remaining);
+      el.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    }
+
     function loadMusicFromManifest() {
       fetch('audio/manifest.json')
         .then(r => r.json())
         .then(files => {
-          // 로컬 업로드 트랙만 유지하고 서버 트랙 전체를 매니페스트로 교체
           const existing = getMusicTracks();
           const localTracks = existing.filter(t => t.local);
-          const serverTracks = files.map(entry => {
+          const existingServer = existing.filter(t => !t.local);
+          const existingByFilename = new Map(existingServer.map(t => [t.filename, t]));
+          const manifestFilenames = new Set(files.map(e => typeof e === 'string' ? e : e.filename));
+
+          // 기존 서버 트랙: 순서 유지 + 메타데이터 갱신, 매니페스트에서 사라진 트랙 제거
+          const updated = existingServer
+            .filter(t => manifestFilenames.has(t.filename))
+            .map(t => {
+              const entry = files.find(e => (typeof e === 'string' ? e : e.filename) === t.filename);
+              if (!entry || typeof entry === 'string') return t;
+              return { ...t, title: entry.title || t.title, artist: entry.artist !== undefined ? entry.artist : t.artist };
+            });
+
+          // 신규 트랙(매니페스트에만 있는 것)은 끝에 추가
+          const added = [];
+          files.forEach(entry => {
             const filename = typeof entry === 'string' ? entry : entry.filename;
-            const id = 'tr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
-            const track = { id, filename, local: false };
-            if (typeof entry === 'object') {
-              if (entry.title) track.title = entry.title;
-              if (entry.artist) track.artist = entry.artist;
+            if (!existingByFilename.has(filename)) {
+              const id = 'tr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+              const track = { id, filename, local: false };
+              if (typeof entry === 'object') {
+                if (entry.title) track.title = entry.title;
+                if (entry.artist !== undefined) track.artist = entry.artist;
+              }
+              added.push(track);
             }
-            return track;
           });
-          saveMusicTracks([...serverTracks, ...localTracks]);
+
+          saveMusicTracks([...updated, ...added, ...localTracks]);
           renderMusicTab();
-          showToast(`서버 트랙 ${serverTracks.length}개로 교체됐습니다.`);
+          showToast(added.length > 0 ? `서버 트랙 업데이트 (${added.length}개 신규)` : '서버 트랙 메타데이터 업데이트 완료');
         })
         .catch(() => showToast('서버 파일 목록을 불러올 수 없습니다.', 'error'));
     }
@@ -1740,6 +1767,8 @@
       _musicCurrentTrackId = trackId;
 
       setMusicState({ trackId, filename: track.filename, command: 'play', isAnnouncement: _musicIsAnnouncement, announcementVol: _musicAnnouncementVol, repeatMode: _musicRepeatMode, commandId: Date.now().toString() });
+      clearInterval(_musicNowPlayingTimer);
+      _musicNowPlayingTimer = setInterval(_updateMusicTime, 500);
       renderMusicTab();
     }
 
@@ -1757,6 +1786,7 @@
         return;
       }
       // 'none': stop
+      clearInterval(_musicNowPlayingTimer); _musicNowPlayingTimer = null;
       _musicCurrentTrackId = null;
       setMusicState({ command: 'stop', commandId: Date.now().toString() });
       renderMusicTab();
@@ -1764,6 +1794,7 @@
 
     function stopMusic() {
       if (!_musicAudio) return;
+      clearInterval(_musicNowPlayingTimer); _musicNowPlayingTimer = null;
       _musicFade(_musicAudio, 0, MUSIC_FADE_MS, () => {
         if (_musicAudio) { _musicAudio.pause(); _musicAudio.src = ''; _musicAudio = null; }
       });
@@ -1896,7 +1927,7 @@
           const tTitle = t.title || p.title;
           const tArtist = t.artist !== undefined ? t.artist : p.artist;
           nowPlaying.style.display = 'block';
-          nowPlaying.textContent = `▶ ${tTitle}${tArtist ? ' · ' + tArtist : ''}${_musicIsAnnouncement ? ' 🎙' : ''}`;
+          nowPlaying.innerHTML = `▶ ${tTitle}${tArtist ? ' · ' + tArtist : ''}${_musicIsAnnouncement ? ' 🎙' : ''}&ensp;<span id="musicTimeRemaining" style="opacity:0.75; font-variant-numeric:tabular-nums;"></span>`;
         }
       } else {
         nowPlaying.style.display = 'none';
