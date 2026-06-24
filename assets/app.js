@@ -221,6 +221,9 @@ const Session = {
   },
   update(id, patch) { return update(STORAGE_KEYS.SESSIONS, id, patch); },
   delete(id) {
+    if (localStorage.getItem(STORAGE_KEYS.ACTIVE_SESSION) === id) {
+      localStorage.removeItem(STORAGE_KEYS.ACTIVE_SESSION);
+    }
     remove(STORAGE_KEYS.SESSIONS, id);
     Record.bySession(id).forEach(r => Record.delete(r.id));
   },
@@ -465,13 +468,17 @@ const Firebase = {
       const data = snap.val();
       if (!this._initialized) {
         this._initialized = true;
-        if (data) {
+        // 로컬에 데이터가 있으면 로컬이 정본 — Firebase를 덮어쓰지 않고 로컬을 Firebase로 push
+        const hasLocal = Object.values(STORAGE_KEYS).some(k => localStorage.getItem(k) !== null);
+        if (hasLocal) {
+          setTimeout(() => this.push(), 100);
+          if (typeof window._onFirebaseSync === 'function') window._onFirebaseSync();
+        } else if (data) {
+          // 로컬 데이터 없음 (새 기기) → Firebase에서 로드
           Object.entries(data).forEach(([k, v]) => {
             localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
           });
           if (typeof window._onFirebaseSync === 'function') window._onFirebaseSync();
-        } else {
-          setTimeout(() => this.push(), 100);
         }
         return;
       }
