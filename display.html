@@ -182,6 +182,48 @@
 
     // === Timer ===
     let _timerWasUrgent = false;
+    let _dispLastBeepSec = -1;
+    let _dispBeepEndPlayed = false;
+    let _dispBeepAudio = null;
+    let _dispBeepEndAudio = null;
+
+    function _dispMakeBeepWav(freq, durationSec) {
+      const sr = 44100, n = Math.ceil(sr * durationSec);
+      const buf = new ArrayBuffer(44 + n * 2);
+      const v = new DataView(buf);
+      const ws = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+      ws(0,'RIFF'); v.setUint32(4, 36+n*2, true);
+      ws(8,'WAVE'); ws(12,'fmt '); v.setUint32(16, 16, true);
+      v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+      v.setUint32(24, sr, true); v.setUint32(28, sr*2, true);
+      v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+      ws(36,'data'); v.setUint32(40, n*2, true);
+      for (let i = 0; i < n; i++) {
+        const t = i / sr;
+        const fade = Math.max(0, 1 - (t / durationSec) * 1.5);
+        v.setInt16(44 + i * 2, Math.sin(2 * Math.PI * freq * t) * fade * 0.65 * 32767, true);
+      }
+      return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+    }
+
+    function _dispInitBeepAudio() {
+      if (_dispBeepAudio) return;
+      try {
+        _dispBeepAudio = new Audio(_dispMakeBeepWav(660, 0.2));
+        _dispBeepEndAudio = new Audio(_dispMakeBeepWav(920, 0.85));
+        _dispBeepAudio.volume = 0.001;
+        _dispBeepAudio.play().then(() => { _dispBeepAudio.pause(); _dispBeepAudio.currentTime = 0; _dispBeepAudio.volume = 0.85; }).catch(() => {});
+        _dispBeepEndAudio.volume = 0.001;
+        _dispBeepEndAudio.play().then(() => { _dispBeepEndAudio.pause(); _dispBeepEndAudio.currentTime = 0; _dispBeepEndAudio.volume = 0.85; }).catch(() => {});
+      } catch(e) {}
+    }
+
+    function _dispPlayBeep(isEnd) {
+      if (!_dispBeepAudio) return;
+      const audio = isEnd ? _dispBeepEndAudio : _dispBeepAudio;
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    }
 
     function renderTimer() {
       const remaining = App.Timer.getRemainingMs();
@@ -190,9 +232,13 @@
       const countEl = document.getElementById('displayTimerCount');
 
       if (state.status !== 'running' || remaining <= 0) {
-        if (state.status === 'running') App.Timer.stop();
+        if (state.status === 'running') {
+          App.Timer.stop();
+          if (!_dispBeepEndPlayed) { _dispPlayBeep(true); _dispBeepEndPlayed = true; }
+        }
         el.style.display = 'none';
         _timerWasUrgent = false;
+        _dispLastBeepSec = -1;
         return;
       }
 
@@ -204,10 +250,17 @@
       const isUrgent = secs <= 10;
       el.classList.toggle('display-timer--urgent', isUrgent);
 
+      // 10~1초 카운트다운 비프
+      if (secs <= 10 && secs > 0 && secs !== _dispLastBeepSec) {
+        _dispPlayBeep(false);
+        _dispLastBeepSec = secs;
+      }
+
       // 10초 진입 시 한 번만 flash
       if (isUrgent && !_timerWasUrgent) {
         el.classList.add('display-timer--flash');
         setTimeout(() => el.classList.remove('display-timer--flash'), 500);
+        _dispBeepEndPlayed = false; // 새 카운트다운 시작
       }
       _timerWasUrgent = isUrgent;
     }
@@ -232,6 +285,7 @@
       // iOS Safari: audio.play()는 user gesture 동기 콜텍스트 안에서만 허용됨
       _audioUnlocked = true;
       document.getElementById('audioUnlockBtn').style.display = 'none';
+      _dispInitBeepAudio(); // 비프 오디오 잠금 해제
       applyMusicState(); // 동기 호출 — iOS 정책 충족
       new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=').play().catch(() => {});
     }
