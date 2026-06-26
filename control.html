@@ -196,14 +196,14 @@
         <div style="display:flex; gap:20px; justify-content:center; align-items:flex-start; margin-bottom:14px;">
           <div style="text-align:center;">
             <div style="font-size:0.75rem; color:#6b7280; margin-bottom:6px;">분</div>
-            <input type="range" min="0" max="59" value="0" id="timerPickerMin"
+            <input type="range" min="0" max="15" value="0" id="timerPickerMin"
                    oninput="updateTimerPicker()" style="width:110px; accent-color:#6366f1; cursor:pointer;">
             <div id="timerPickerMinVal" style="font-size:1.8rem; font-weight:800; font-variant-numeric:tabular-nums; margin-top:4px; color:#1e1b4b;">0</div>
           </div>
           <div style="font-size:1.8rem; font-weight:800; color:#6b7280; padding-top:26px;">:</div>
           <div style="text-align:center;">
             <div style="font-size:0.75rem; color:#6b7280; margin-bottom:6px;">초</div>
-            <input type="range" min="0" max="59" value="30" id="timerPickerSec"
+            <input type="range" min="0" max="55" step="5" value="30" id="timerPickerSec"
                    oninput="updateTimerPicker()" style="width:110px; accent-color:#6366f1; cursor:pointer;">
             <div id="timerPickerSecVal" style="font-size:1.8rem; font-weight:800; font-variant-numeric:tabular-nums; margin-top:4px; color:#1e1b4b;">30</div>
           </div>
