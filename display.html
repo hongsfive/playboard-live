@@ -212,6 +212,19 @@
       _timerWasUrgent = isUrgent;
     }
 
+    // === Wake Lock (화면 꺼짐 방지) ===
+    let _wakeLock = null;
+    async function _requestWakeLock() {
+      if (!('wakeLock' in navigator)) return;
+      try {
+        _wakeLock = await navigator.wakeLock.request('screen');
+      } catch (e) {}
+    }
+    _requestWakeLock();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') _requestWakeLock();
+    });
+
     // === Audio unlock (브라우저 autoplay 정책 해제) ===
     let _audioUnlocked = false;
 
