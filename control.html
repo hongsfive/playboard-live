@@ -174,14 +174,45 @@
   <div id="timerBar" class="timer-bar">
     <div id="timerCount" class="timer-count">⏱</div>
     <div class="timer-presets">
+      <button class="timer-preset-btn" onclick="startTimer(10)">10초</button>
       <button class="timer-preset-btn" onclick="startTimer(30)">30초</button>
       <button class="timer-preset-btn" onclick="startTimer(60)">1분</button>
-      <button class="timer-preset-btn" onclick="startTimer(120)">2분</button>
-      <button class="timer-preset-btn" onclick="startTimer(180)">3분</button>
-      <input class="timer-custom-input" type="number" id="timerCustomInput" placeholder="초" min="1" max="3600" onkeydown="if(event.key==='Enter')startCustomTimer()">
-      <button class="timer-preset-btn" onclick="startCustomTimer()" style="flex:0; padding:6px 8px;">▶</button>
+      <button class="timer-preset-btn" onclick="openTimerModal()" style="flex:0; padding:6px 10px; opacity:0.7;">+</button>
     </div>
     <button class="timer-stop-btn hidden" id="timerStopBtn" onclick="stopTimer()">■ 정지</button>
+  </div>
+
+  <!-- Timer Modal -->
+  <div class="modal-overlay hidden" id="timerModal">
+    <div class="modal" style="max-width:300px;">
+      <div class="modal-title">타이머 설정</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px;">
+        <button class="btn btn--outline" onclick="startTimerFromModal(15)">15초</button>
+        <button class="btn btn--outline" onclick="startTimerFromModal(120)">2분</button>
+        <button class="btn btn--outline" onclick="startTimerFromModal(180)">3분</button>
+        <button class="btn btn--outline" onclick="startTimerFromModal(300)">5분</button>
+      </div>
+      <div style="border-top:1px solid #e5e7eb; padding-top:16px;">
+        <div style="display:flex; gap:20px; justify-content:center; align-items:flex-start; margin-bottom:14px;">
+          <div style="text-align:center;">
+            <div style="font-size:0.75rem; color:#6b7280; margin-bottom:6px;">분</div>
+            <input type="range" min="0" max="59" value="0" id="timerPickerMin"
+                   oninput="updateTimerPicker()" style="width:110px; accent-color:#6366f1; cursor:pointer;">
+            <div id="timerPickerMinVal" style="font-size:1.8rem; font-weight:800; font-variant-numeric:tabular-nums; margin-top:4px; color:#1e1b4b;">0</div>
+          </div>
+          <div style="font-size:1.8rem; font-weight:800; color:#6b7280; padding-top:26px;">:</div>
+          <div style="text-align:center;">
+            <div style="font-size:0.75rem; color:#6b7280; margin-bottom:6px;">초</div>
+            <input type="range" min="0" max="59" value="30" id="timerPickerSec"
+                   oninput="updateTimerPicker()" style="width:110px; accent-color:#6366f1; cursor:pointer;">
+            <div id="timerPickerSecVal" style="font-size:1.8rem; font-weight:800; font-variant-numeric:tabular-nums; margin-top:4px; color:#1e1b4b;">30</div>
+          </div>
+        </div>
+        <div id="timerPickerPreview" style="text-align:center; font-size:2.4rem; font-weight:900; color:#6366f1; font-variant-numeric:tabular-nums; margin-bottom:16px;">0:30</div>
+        <button class="btn btn--primary btn--block" onclick="startTimerFromPicker()">▶ 시작</button>
+      </div>
+      <button class="btn btn--outline btn--block" style="margin-top:8px;" onclick="closeModal('timerModal')">취소</button>
+    </div>
   </div>
 
   <div class="modal-overlay hidden" id="gameModal">
@@ -1610,18 +1641,70 @@
 
     // === Timer ===
     let _timerTick = null;
+    let _lastBeepSec = -1;
+    let _beepEndPlayed = false;
+    let _audioCtx = null;
 
-    function startCustomTimer() {
-      const val = Number(document.getElementById('timerCustomInput').value) || 0;
-      if (val <= 0) { showToast('시간을 입력해 주세요. (단위: 초)', 'error'); return; }
-      startTimer(val);
-      document.getElementById('timerCustomInput').value = '';
+    function _getAudioCtx() {
+      if (!_audioCtx) {
+        try { _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+      }
+      if (_audioCtx && _audioCtx.state === 'suspended') _audioCtx.resume().catch(() => {});
+      return _audioCtx;
+    }
+
+    function _playBeep(freq, duration) {
+      const ctx = _getAudioCtx();
+      if (!ctx) return;
+      try {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.35, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + duration);
+      } catch(e) {}
+    }
+
+    function openTimerModal() {
+      updateTimerPicker();
+      document.getElementById('timerModal').classList.remove('hidden');
+    }
+
+    function updateTimerPicker() {
+      const m = parseInt(document.getElementById('timerPickerMin').value);
+      const s = parseInt(document.getElementById('timerPickerSec').value);
+      document.getElementById('timerPickerMinVal').textContent = m;
+      document.getElementById('timerPickerSecVal').textContent = s;
+      document.getElementById('timerPickerPreview').textContent = `${m}:${String(s).padStart(2, '0')}`;
+    }
+
+    function startTimerFromModal(seconds) {
+      closeModal('timerModal');
+      startTimer(seconds);
+    }
+
+    function startTimerFromPicker() {
+      const m = parseInt(document.getElementById('timerPickerMin').value);
+      const s = parseInt(document.getElementById('timerPickerSec').value);
+      const total = m * 60 + s;
+      if (total <= 0) { showToast('시간을 설정해 주세요.', 'error'); return; }
+      closeModal('timerModal');
+      startTimer(total);
     }
 
     function startTimer(seconds) {
+      _getAudioCtx(); // user gesture 시점에 AudioContext 초기화 (iOS 정책)
+      _lastBeepSec = -1;
+      _beepEndPlayed = false;
       App.Timer.start(seconds * 1000);
+      const labelMap = { 10: '10초', 30: '30초', 60: '1분' };
       document.querySelectorAll('.timer-preset-btn').forEach(b => {
-        b.classList.toggle('timer-preset--active', b.textContent === (seconds < 60 ? seconds + '초' : (seconds / 60) + '분'));
+        b.classList.toggle('timer-preset--active', b.textContent === (labelMap[seconds] || ''));
       });
       if (_timerTick) clearInterval(_timerTick);
       _timerTick = setInterval(_updateTimerBar, 200);
@@ -1631,6 +1714,8 @@
     function stopTimer() {
       App.Timer.stop();
       if (_timerTick) { clearInterval(_timerTick); _timerTick = null; }
+      _lastBeepSec = -1;
+      _beepEndPlayed = false;
       _updateTimerBar();
     }
 
@@ -1641,7 +1726,13 @@
       const stopBtn = document.getElementById('timerStopBtn');
 
       if (state.status !== 'running' || remaining <= 0) {
-        if (state.status === 'running') App.Timer.stop();
+        if (state.status === 'running') {
+          App.Timer.stop();
+          if (!_beepEndPlayed) {
+            _playBeep(880, 0.7); // 높고 긴 종료음
+            _beepEndPlayed = true;
+          }
+        }
         countEl.textContent = '⏱';
         countEl.classList.remove('timer--urgent');
         stopBtn.classList.add('hidden');
@@ -1651,6 +1742,13 @@
       }
 
       const secs = Math.ceil(remaining / 1000);
+
+      // 10~1초 카운트다운 비프 (매 초 변경 시)
+      if (secs <= 10 && secs > 0 && secs !== _lastBeepSec) {
+        _playBeep(520, 0.12);
+        _lastBeepSec = secs;
+      }
+
       const m = Math.floor(secs / 60), s = secs % 60;
       countEl.textContent = `${m}:${String(s).padStart(2, '0')}`;
       countEl.classList.toggle('timer--urgent', secs <= 10);
