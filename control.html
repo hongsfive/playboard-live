@@ -12,6 +12,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
 </head>
 <body>
   <div id="app">
@@ -154,7 +155,7 @@
               <input class="form-input" id="musicFilenameInput" placeholder="파일명 직접 입력 (노래제목_가수.mp3)" style="flex:1; min-width:180px;">
               <button class="btn btn--outline btn--sm" onclick="addTrackByFilename()">+ 추가</button>
             </div>
-            <div class="text-sm text-muted">업로드 파일은 이 기기에서만 재생. 서버 파일은 모든 기기 공유.</div>
+            <div class="text-sm text-muted">로그인 후 업로드하면 Firebase에 저장되어 모든 기기 공유. 파일명 형식: <code>노래제목_가수.mp3</code></div>
           </div>
         </div>
       </div>
@@ -1680,21 +1681,54 @@
 
     function _getTrackUrl(track) {
       if (_musicObjectUrls[track.id]) return _musicObjectUrls[track.id];
+      if (track.url) return track.url;
       return `audio/${track.filename}`;
     }
 
     function handleMusicFileUpload(e) {
       const files = Array.from(e.target.files);
-      const tracks = getMusicTracks();
+      if (!files.length) return;
+      e.target.value = '';
+
+      const uid = App.Firebase._uid;
+      if (!uid) {
+        // 로그인 전: 로컬 ObjectURL 방식 fallback (이 기기에서만 재생)
+        const tracks = getMusicTracks();
+        files.forEach(file => {
+          const id = 'tr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+          const objUrl = URL.createObjectURL(file);
+          _musicObjectUrls[id] = objUrl;
+          const meta = parseMusicFilename(file.name);
+          tracks.push({ id, filename: file.name, title: meta.title, artist: meta.artist, local: true });
+        });
+        saveMusicTracks(tracks);
+        renderMusicTab();
+        showToast('로그인하면 모든 기기에서 공유됩니다', 'error');
+        return;
+      }
+
+      // Firebase Storage 업로드 (다중 파일 병렬 처리)
+      const storage = firebase.storage();
+      showToast(`${files.length}개 파일 업로드 중…`);
+      let done = 0;
       files.forEach(file => {
         const id = 'tr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
-        const url = URL.createObjectURL(file);
-        _musicObjectUrls[id] = url;
-        tracks.push({ id, filename: file.name, local: true });
+        const ref = storage.ref(`music/${uid}/${id}_${file.name}`);
+        ref.put(file)
+          .then(snapshot => snapshot.ref.getDownloadURL())
+          .then(downloadURL => {
+            const meta = parseMusicFilename(file.name);
+            const tracks = getMusicTracks();
+            tracks.push({ id, filename: file.name, title: meta.title, artist: meta.artist, local: false, url: downloadURL });
+            saveMusicTracks(tracks);
+            done++;
+            if (done === files.length) {
+              renderMusicTab();
+              showToast(`${files.length}개 트랙 업로드 완료`);
+            }
+          })
+          .catch(err => showToast(`업로드 실패: ${file.name} — ${err.message}`, 'error'));
       });
-      saveMusicTracks(tracks);
-      renderMusicTab();
-      e.target.value = '';
     }
 
     function _updateMusicTime() {
@@ -1792,7 +1826,7 @@
       _musicAudio.addEventListener('ended', _onMusicEnded);
       _musicCurrentTrackId = trackId;
 
-      setMusicState({ trackId, filename: track.filename, command: 'play', isAnnouncement: _musicIsAnnouncement, announcementVol: _musicAnnouncementVol, repeatMode: _musicRepeatMode, commandId: Date.now().toString() });
+      setMusicState({ trackId, filename: track.filename, url: track.url || null, command: 'play', isAnnouncement: _musicIsAnnouncement, announcementVol: _musicAnnouncementVol, repeatMode: _musicRepeatMode, commandId: Date.now().toString() });
       clearInterval(_musicNowPlayingTimer);
       _musicNowPlayingTimer = setInterval(_updateMusicTime, 500);
       renderMusicTab();
