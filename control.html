@@ -881,34 +881,70 @@
     }
 
     function renderSessions() {
-      const sessions = App.Session.all().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      const sorted = App.Session.all().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      const activeSessions = sorted.filter(s => s.status !== 'completed');
+      const completedSessions = sorted.filter(s => s.status === 'completed');
       const active = getActiveSession();
       fillRepertoireSelect('sessionRepertoire');
       if (!document.getElementById('sessionDate').value) {
         document.getElementById('sessionDate').value = new Date().toISOString().slice(0, 10);
       }
-      const html = sessions.length === 0
-        ? '<div class="empty-state">등록된 세션이 없습니다. 새 세션을 만들어 주세요.</div>'
-        : sessions.map(s => {
-            const scores = App.Session.getScores(s.id);
-            const repertoire = s.repertoireId ? App.Repertoire.byId(s.repertoireId) : null;
-            const isActive = active && active.id === s.id;
-            return `
-              <div class="game-item session-list-item">
-                <div class="game-info">
-                  <div class="game-name">${isActive ? '🔵 ' : ''}${s.title}</div>
-                  <div class="game-meta">${s.date || '-'} · ${repertoire ? repertoire.title : '레퍼토리 없음'} · ${s.leftTeamName} ${scores.leftTotal} : ${scores.rightTotal} ${s.rightTeamName}</div>
-                  <div class="text-sm text-muted mt-1">상태: ${formatSessionStatus(s.status)}</div>
-                </div>
-                <div class="game-actions">
-                  ${!isActive ? `<button class="btn btn--outline btn--sm" onclick="setActiveSessionOnly('${s.id}')">활성 선택</button>` : ''}
-                  <button class="btn btn--primary btn--sm" onclick="openSession('${s.id}')">진행 열기</button>
-                  <button class="btn btn--outline btn--sm" onclick="editSession('${s.id}')">수정</button>
-                  <button class="btn btn--danger btn--sm" onclick="deleteSession('${s.id}')">삭제</button>
-                </div>
+
+      if (sorted.length === 0) {
+        document.getElementById('sessionList').innerHTML = '<div class="empty-state">등록된 세션이 없습니다. 새 세션을 만들어 주세요.</div>';
+        return;
+      }
+
+      const renderNormal = s => {
+        const scores = App.Session.getScores(s.id);
+        const repertoire = s.repertoireId ? App.Repertoire.byId(s.repertoireId) : null;
+        const isActive = active && active.id === s.id;
+        return `
+          <div class="game-item session-list-item">
+            <div class="game-info">
+              <div class="game-name">${isActive ? '🔵 ' : ''}${s.title}</div>
+              <div class="game-meta">${s.date || '-'} · ${repertoire ? repertoire.title : '레퍼토리 없음'} · ${s.leftTeamName} ${scores.leftTotal} : ${scores.rightTotal} ${s.rightTeamName}</div>
+              <div class="text-sm text-muted mt-1">상태: ${formatSessionStatus(s.status)}</div>
+            </div>
+            <div class="game-actions">
+              ${!isActive ? `<button class="btn btn--outline btn--sm" onclick="setActiveSessionOnly('${s.id}')">활성 선택</button>` : ''}
+              <button class="btn btn--primary btn--sm" onclick="openSession('${s.id}')">진행 열기</button>
+              <button class="btn btn--outline btn--sm" onclick="editSession('${s.id}')">수정</button>
+              <button class="btn btn--danger btn--sm" onclick="deleteSession('${s.id}')">삭제</button>
+            </div>
+          </div>`;
+      };
+
+      const renderCollapsed = s => {
+        const scores = App.Session.getScores(s.id);
+        const repertoire = s.repertoireId ? App.Repertoire.byId(s.repertoireId) : null;
+        const isActive = active && active.id === s.id;
+        const detailId = `sess-detail-${s.id}`;
+        return `
+          <div class="game-item session-list-item" style="opacity:0.55; flex-direction:column; gap:0;">
+            <div style="display:flex; align-items:center; gap:8px; width:100%; cursor:pointer;"
+                 onclick="const d=document.getElementById('${detailId}');d.style.display=d.style.display==='none'?'block':'none';">
+              <span style="font-size:0.75rem; color:#6b7280; flex-shrink:0;">✓ 완료</span>
+              <span style="font-weight:600; font-size:0.9rem; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${isActive ? '🔵 ' : ''}${s.title}</span>
+              <span style="font-size:0.75rem; color:#9ca3af; flex-shrink:0;">▾ 펼치기</span>
+            </div>
+            <div id="${detailId}" style="display:none; margin-top:8px; width:100%;">
+              <div class="game-meta">${s.date || '-'} · ${repertoire ? repertoire.title : '레퍼토리 없음'} · ${s.leftTeamName} ${scores.leftTotal} : ${scores.rightTotal} ${s.rightTeamName}</div>
+              <div class="game-actions" style="margin-top:8px;">
+                ${!isActive ? `<button class="btn btn--outline btn--sm" onclick="setActiveSessionOnly('${s.id}')">활성 선택</button>` : ''}
+                <button class="btn btn--primary btn--sm" onclick="openSession('${s.id}')">진행 열기</button>
+                <button class="btn btn--outline btn--sm" onclick="editSession('${s.id}')">수정</button>
+                <button class="btn btn--danger btn--sm" onclick="deleteSession('${s.id}')">삭제</button>
               </div>
-            `;
-          }).join('');
+            </div>
+          </div>`;
+      };
+
+      let html = activeSessions.map(renderNormal).join('');
+      if (completedSessions.length > 0) {
+        html += `<div style="margin:10px 0 6px; font-size:0.75rem; color:#9ca3af; padding-top:10px; border-top:1px solid #e5e7eb;">완료된 세션 (${completedSessions.length})</div>`;
+        html += completedSessions.map(renderCollapsed).join('');
+      }
       document.getElementById('sessionList').innerHTML = html;
     }
 
